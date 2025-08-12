@@ -1,0 +1,53 @@
+:root{
+  --background: #F8F5ED;
+  --green: #3A7D44;
+  --green-secondary: #6B9E4B;
+  --brown: #4A3F35;
+}
+
+.sidebar {
+  background: #fff;
+  border-right: 1px solid #eee7d8;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brand { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; }
+.brand-logo { width: 140px; height: auto; object-fit: contain; border-radius: 14px; }
+.toggle-btn { align-self: flex-end; background: var(--background); border: 1px solid #e5e0d1; border-radius: 12px; padding: 8px 10px; cursor: pointer; }
+.toggle-btn:hover { background: #fff; }
+
+.nav { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.nav-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--brown);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-item:hover { background: #f3efe4; }
+.nav-item.active { background: var(--background); color: var(--green); border: 1px solid var(--green-secondary); }
+
+.toolbar { margin-top: auto; display: flex; gap: 8px; }
+.icon-btn { background: var(--background); border: 1px solid #e5e0d1; border-radius: 12px; padding: 10px; cursor: pointer; }
+.icon-btn:hover { background: #fff; }
+
+/* Estados de colapso */
+.sidebar.closed .brand-logo { width: 56px; }
+.sidebar.closed .nav .nav-item .label { display: none; }
+.sidebar.closed .nav .nav-item { justify-content: center; }
+.sidebar.closed .nav .nav-item svg { margin-right: 0; }
+.sidebar.closed .toolbar { align-items: center; }
+
+/* Ícones maiores quando fechada */
+.sidebar.closed .nav .nav-item svg,
+.sidebar.closed .toolbar .icon-btn svg { width: 28px; height: 28px; }
+
+@media (max-width: 720px) {
+  .sidebar { position: sticky; top: 0; z-index: 10; flex-direction: row; align-items: center; justify-content: space-between; }
+  .nav { flex-direction: row; flex-wrap: wrap; }
+}
+
+
