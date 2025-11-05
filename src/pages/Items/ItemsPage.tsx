@@ -45,7 +45,7 @@ export default function ItemsPage() {
       if (ordenarPor === "nome" || ordenarPor === "categoria") {
         return a[ordenarPor].localeCompare(b[ordenarPor]) * dir;
       }
-      return (a as any)[ordenarPor] - (b as any)[ordenarPor] * dir;
+      return ((a as any)[ordenarPor] - (b as any)[ordenarPor]) * dir;
     });
     return data;
   }, [itens, query, categoria, ordenarPor, asc]);
@@ -80,12 +80,23 @@ export default function ItemsPage() {
     setConfirmacao(null);
   }
 
+  const totalItens = itens.length;
+  const totalFiltrados = itensFiltrados.length;
+
   return (
     <div className="items-page">
+      {/* Cabeçalho da página */}
+      <div className="page-header">
+        <h2 className="page-title">Gestão de Itens</h2>
+        <div className="badges">
+          <span className="badge">Total: {totalItens}</span>
+          <span className="badge highlight">Exibindo: {totalFiltrados}</span>
+        </div>
+      </div>
       {/* Barra de ferramentas */}
       <div className="toolbar">
         <div className="search-group">
-          <Search size={18} />
+          <Search size={20} />
           <input
             className="input"
             placeholder="Buscar por nome"
@@ -99,7 +110,7 @@ export default function ItemsPage() {
 
         <div className="filters">
           <div className="select-group">
-            <Filter size={18} />
+            <Filter size={20} />
             <select className="select" value={categoria} onChange={(e) => { setPagina(1); setCategoria(e.target.value); }}>
               <option value="">Todas as categorias</option>
               {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -114,12 +125,12 @@ export default function ItemsPage() {
               <option value="quantidade">Quantidade</option>
               <option value="custo">Custo</option>
             </select>
-            <button className="toggle" onClick={() => setAsc((v) => !v)}>{asc ? "▲" : "▼"}</button>
+            <button className="toggle" onClick={() => setAsc((v) => !v)} aria-label="Alternar ordenação">{asc ? "▲" : "▼"}</button>
           </div>
         </div>
 
         <button className="add-button" onClick={abrirNovo}>
-          <Plus size={18} /> Adicionar Novo Item
+          <Plus size={20} /> Adicionar Novo Item
         </button>
       </div>
 
@@ -128,28 +139,28 @@ export default function ItemsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Categoria</th>
-              <th className="right">Quantidade</th>
-              <th>Unidade</th>
-              <th className="right">Custo</th>
-              <th className="center">Ações</th>
+              <th className="th-name">Nome</th>
+              <th className="th-category">Categoria</th>
+              <th className="th-qty right">Quantidade</th>
+              <th className="th-unit">Unidade</th>
+              <th className="th-cost right">Custo</th>
+              <th className="th-actions center">Ações</th>
             </tr>
           </thead>
           <tbody>
             {paginaAtual.map((item, idx) => (
               <tr key={item.id} className={idx % 2 === 0 ? "alt" : ""}>
-                <td>{item.nome}</td>
-                <td>{item.categoria}</td>
-                <td className="right">{item.quantidade}</td>
-                <td>{item.unidade}</td>
-                <td className="right">{formatCurrency(item.custo)}</td>
-                <td className="center actions">
-                  <button className="icon green" onClick={() => abrirEdicao(item)}>
-                    <Pencil size={18} />
+                <td className="td-name">{item.nome}</td>
+                <td className="td-category">{item.categoria}</td>
+                <td className="td-qty right">{item.quantidade}</td>
+                <td className="td-unit">{item.unidade}</td>
+                <td className="td-cost right">{formatCurrency(item.custo)}</td>
+                <td className="td-actions center actions">
+                  <button className="icon green" onClick={() => abrirEdicao(item)} title="Editar item">
+                    <Pencil size={20} />
                   </button>
-                  <button className="icon danger" onClick={() => setConfirmacao(item)}>
-                    <Trash2 size={18} />
+                  <button className="icon danger" onClick={() => setConfirmacao(item)} title="Remover item">
+                    <Trash2 size={20} />
                   </button>
                 </td>
               </tr>

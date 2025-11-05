@@ -15,8 +15,15 @@
 .add-button { background: var(--green); color: white; border: none; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .add-button:hover { background: var(--green-600); }
 
-.table-wrapper { background: #fff; border: 1px solid #eee7d8; border-radius: 14px; overflow: hidden; }
-.table { width: 100%; border-collapse: collapse; }
+.table-wrapper {
+  background: #fff;
+  border: 1px solid #eee7d8;
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.table { width: 100%; min-width: 560px; border-collapse: collapse; }
 .table thead { background: var(--background); }
 .table th, .table td { padding: 12px 10px; border-bottom: 1px solid #eee7d8; }
 .table th { text-align: left; color: var(--brown); font-weight: 700; }
@@ -32,7 +39,7 @@
 
 .empty { text-align: center; color: var(--brown); padding: 24px 0; }
 
-.pagination { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.pagination { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 .pagination button { background: #fff; border: 1px solid #e5e0d1; border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--brown); }
 .pagination .page.active { background: var(--green); color: white; border-color: var(--green); }
 
@@ -50,5 +57,26 @@
 .btn.primary { background: var(--green); color: white; }
 .btn.secondary { background: var(--background); color: var(--brown); border: 1px solid #e5e0d1; }
 .btn.danger { background: var(--danger); color: white; }
+
+@media (max-width: 960px) {
+  .toolbar { gap: 12px; }
+}
+
+@media (max-width: 720px) {
+  .search-group { width: 100%; }
+  .input { min-width: 0; width: 100%; }
+  .table { min-width: 520px; }
+}
+
+@media (max-width: 560px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .add-button { width: 100%; justify-content: center; }
+  .table { min-width: 480px; }
+  .pagination { justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .table { min-width: 440px; }
+}
 
 

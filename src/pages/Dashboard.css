@@ -94,4 +94,10 @@
   .menu-toggle { order: -1; }
 }
 
+@media (max-width: 560px) {
+  .summary-cards { grid-template-columns: 1fr; }
+  .quick-actions { flex-direction: column; }
+  .quick-actions .action-button { width: 100%; }
+}
+
 
