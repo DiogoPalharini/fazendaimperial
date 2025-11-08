@@ -1,11 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import './Sidebar.css'
-import logo from '../assets/Fazenda Imperial.png'
+import logo from '../assets/icon.png'
 import {
-  Boxes,
   LayoutDashboard,
-  Tags,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -25,10 +22,7 @@ type SidebarProps = {
 const menuItems = [
   { key: 'dashboard', path: '/dashboard', label: 'Visão Geral', Icon: LayoutDashboard },
   { key: 'truck-loading', path: '/carregamento', label: 'Carregamento de Caminhão', Icon: Truck },
-  { key: 'selection', path: '/selecao-cargas', label: 'Seleção de Cargas', Icon: BarChart3 },
-  { key: 'items', path: '/itens', label: 'Gestão de Itens', Icon: Boxes },
-  { key: 'categories', path: '/categorias', label: 'Categorias', Icon: Tags },
-  { key: 'invoice', path: '/nota-fiscal', label: 'Geração de Nota Fiscal', Icon: FileText },
+  { key: 'invoice', path: '/nota-fiscal', label: 'Nota Fiscal', Icon: FileText },
   { key: 'machines', path: '/maquinas', label: 'Controle de Máquinas', Icon: Tractor },
   { key: 'inputs', path: '/insumos', label: 'Controle de Insumos', Icon: Package },
   { key: 'finance', path: '/financeiro', label: 'Controle Financeiro', Icon: Wallet },

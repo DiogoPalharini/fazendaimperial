@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent, ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Login.css'
-import logo from '../../assets/Fazenda Imperial.png'
+import logo from '../../assets/icon.png'
 
 type FormErrors = {
   username?: string

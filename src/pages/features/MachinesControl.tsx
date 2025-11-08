@@ -8,6 +8,11 @@ import {
   Wrench,
   ClipboardCheck,
   X,
+  Edit,
+  Trash2,
+  Calendar,
+  AlertCircle,
+  Clock,
 } from 'lucide-react'
 import './MachinesControl.css'
 
@@ -148,6 +153,7 @@ export default function MachinesControl() {
   const [modalOpen, setModalOpen] = useState(false)
   const [formState, setFormState] = useState<MachineForm>(emptyForm)
   const [detailMachine, setDetailMachine] = useState<Machine | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Machine | null>(null)
 
   const filteredMachines = useMemo(() => {
     return machines.filter((machine) => {
@@ -251,6 +257,36 @@ export default function MachinesControl() {
       },
       ...prev,
     ])
+
+    if (detailMachine?.id === machine.id) {
+      setDetailMachine({
+        ...machine,
+        status: 'Em manutenção',
+        ultimaManutencao: today.toISOString().slice(0, 10),
+        proximaManutencao: next.toISOString().slice(0, 10),
+      })
+    }
+  }
+
+  const handleDelete = (machine: Machine) => {
+    setMachines((prev) => prev.filter((m) => m.id !== machine.id))
+    setMaintenanceLog((prev) => prev.filter((log) => log.machineId !== machine.id))
+    setDeleteConfirm(null)
+    if (detailMachine?.id === machine.id) {
+      closeDetailModal()
+    }
+  }
+
+  const getMaintenanceStatus = (date: string) => {
+    const today = new Date()
+    const maintenanceDate = new Date(date)
+    const diffTime = maintenanceDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) return { status: 'overdue', days: Math.abs(diffDays), label: 'Atrasada' }
+    if (diffDays <= 7) return { status: 'urgent', days: diffDays, label: 'Urgente' }
+    if (diffDays <= 30) return { status: 'warning', days: diffDays, label: 'Próxima' }
+    return { status: 'ok', days: diffDays, label: 'Agendada' }
   }
 
   return (
@@ -260,9 +296,6 @@ export default function MachinesControl() {
           <h2>Controle de Máquinas</h2>
           <p>Cadastre, monitore e planeje manutenções da frota de tratores, caminhões e camionetes.</p>
         </div>
-        <button className="primary-button" type="button" onClick={openCreateModal}>
-          <Plus size={18} /> Nova máquina
-        </button>
       </header>
 
       <section className="machines-summary">
@@ -330,6 +363,12 @@ export default function MachinesControl() {
         </div>
       </section>
 
+      <div className="machines-table-header">
+        <button className="primary-button" type="button" onClick={openCreateModal}>
+          <Plus size={18} /> Nova máquina
+        </button>
+      </div>
+
       <section className="machines-table-wrapper">
         <table className="machines-table">
           <thead>
@@ -338,39 +377,84 @@ export default function MachinesControl() {
               <th>Tipo</th>
               <th>Status</th>
               <th>Próxima manutenção</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {filteredMachines.map((machine) => (
-              <tr
-                key={machine.id}
-                className="machines-row"
-                onClick={() => openDetailModal(machine)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    openDetailModal(machine)
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <td>
-                  <span className="machine-name">{machine.nome}</span>
-                  <span className="machine-meta">{machine.identificacao}</span>
-                </td>
-                <td>{machine.tipo}</td>
-                <td>
-                  <span className={`status-chip status-${machine.status.replace(' ', '-').toLowerCase()}`}>
-                    {machine.status}
-                  </span>
-                </td>
-                <td>{formatDate(machine.proximaManutencao)}</td>
-              </tr>
-            ))}
+            {filteredMachines.map((machine) => {
+              const maintenanceStatus = getMaintenanceStatus(machine.proximaManutencao)
+              return (
+                <tr key={machine.id} className="machines-row">
+                  <td
+                    onClick={() => openDetailModal(machine)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openDetailModal(machine)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="machine-cell-clickable"
+                  >
+                    <span className="machine-name">{machine.nome}</span>
+                    <span className="machine-meta">{machine.identificacao}</span>
+                  </td>
+                  <td>{machine.tipo}</td>
+                  <td>
+                    <span className={`status-chip status-${machine.status.replace(' ', '-').toLowerCase()}`}>
+                      {machine.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="maintenance-cell">
+                      <span>{formatDate(machine.proximaManutencao)}</span>
+                      {maintenanceStatus.status !== 'ok' && (
+                        <span className={`maintenance-badge maintenance-${maintenanceStatus.status}`}>
+                          {maintenanceStatus.status === 'overdue' && <AlertCircle size={12} />}
+                          {maintenanceStatus.status === 'urgent' && <Clock size={12} />}
+                          {maintenanceStatus.days === 0 ? 'Hoje' : `${maintenanceStatus.days}d`}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="table-actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="action-btn edit"
+                        onClick={() => openEditModal(machine)}
+                        title="Editar máquina"
+                        aria-label="Editar máquina"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="action-btn maintenance"
+                        onClick={() => scheduleMaintenance(machine)}
+                        title="Agendar manutenção"
+                        aria-label="Agendar manutenção"
+                      >
+                        <Calendar size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="action-btn delete"
+                        onClick={() => setDeleteConfirm(machine)}
+                        title="Excluir máquina"
+                        aria-label="Excluir máquina"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {filteredMachines.length === 0 && (
               <tr>
-                <td colSpan={4} className="empty">Nenhuma máquina encontrada com os filtros atuais.</td>
+                <td colSpan={5} className="empty">Nenhuma máquina encontrada com os filtros atuais.</td>
               </tr>
             )}
           </tbody>
@@ -557,8 +641,45 @@ export default function MachinesControl() {
               </div>
             </div>
 
+            <div className="machine-details-actions">
+              <div className="maintenance-status-info">
+                {(() => {
+                  const maintenanceStatus = getMaintenanceStatus(detailMachine.proximaManutencao)
+                  if (maintenanceStatus.status !== 'ok') {
+                    return (
+                      <div className={`maintenance-alert maintenance-${maintenanceStatus.status}`}>
+                        <AlertCircle size={18} />
+                        <div>
+                          <strong>Manutenção {maintenanceStatus.label}</strong>
+                          <span>
+                            {maintenanceStatus.status === 'overdue'
+                              ? `${maintenanceStatus.days} dias atrasada`
+                              : `Em ${maintenanceStatus.days} dias`}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+            </div>
+
             <footer>
-              <button type="button" className="secondary-button" onClick={closeDetailModal}>Fechar</button>
+              <button type="button" className="secondary-button" onClick={closeDetailModal}>
+                Fechar
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  if (!detailMachine) return
+                  scheduleMaintenance(detailMachine)
+                }}
+              >
+                <Calendar size={16} />
+                Agendar manutenção
+              </button>
               <button
                 type="button"
                 className="primary-button"
@@ -569,7 +690,39 @@ export default function MachinesControl() {
                   openEditModal(machineToEdit)
                 }}
               >
+                <Edit size={16} />
                 Editar máquina
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="machine-modal" role="dialog" aria-modal="true">
+          <div className="machine-modal__card delete-confirm">
+            <header>
+              <div>
+                <h3>Confirmar exclusão</h3>
+                <p>Tem certeza que deseja excluir esta máquina? Esta ação não pode ser desfeita.</p>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setDeleteConfirm(null)} aria-label="Fechar">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="delete-confirm-info">
+              <strong>{deleteConfirm.nome}</strong>
+              <span>{deleteConfirm.identificacao} • {deleteConfirm.tipo}</span>
+            </div>
+
+            <footer>
+              <button type="button" className="secondary-button" onClick={() => setDeleteConfirm(null)}>
+                Cancelar
+              </button>
+              <button type="button" className="danger-button" onClick={() => handleDelete(deleteConfirm)}>
+                <Trash2 size={16} />
+                Excluir máquina
               </button>
             </footer>
           </div>
