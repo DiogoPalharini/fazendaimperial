@@ -4,19 +4,9 @@ import InputDetailsModal from './components/InputDetailsModal'
 import AddInputModal from './components/AddInputModal'
 import type { InputItem, MovementEntry, StockStatus, InputCategory } from './types'
 import { INITIAL_INPUTS, INITIAL_MOVEMENTS } from './constants'
+import { formatCurrency, formatDate, getStatus } from './utils'
 import '../FeaturePage.css'
 import './InputsControl.css'
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
-
-const getStatus = (item: InputItem): StockStatus => {
-  if (item.estoqueAtual <= item.estoqueMinimo) {
-    return 'Estoque baixo'
-  }
-
-  return 'Em dia'
-}
 
 export default function InputsControl() {
   const [search, setSearch] = useState('')

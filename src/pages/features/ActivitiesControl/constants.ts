@@ -28,6 +28,13 @@ export const TALHOES = [
 
 export const CULTURAS = ['Soja', 'Milho', 'Algodão', 'Trigo', 'Café', 'Cana-de-açúcar']
 
+// Função para obter datas relativas
+const getDateString = (daysFromToday: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + daysFromToday)
+  return date.toISOString().slice(0, 10)
+}
+
 export const INITIAL_ACTIVITIES: Activity[] = [
   {
     id: 'act-1',
@@ -37,11 +44,11 @@ export const INITIAL_ACTIVITIES: Activity[] = [
     funcionario: 'João Silva',
     talhao: 'Talhão 07',
     cultura: 'Soja',
-    dataInicio: '2025-01-15',
-    dataFim: '2025-01-15',
+    dataInicio: getDateString(-10),
+    dataFim: getDateString(-10),
     status: 'Concluída',
     prioridade: 'Alta',
-    dataConclusao: '2025-01-15',
+    dataConclusao: getDateString(-10),
     observacoes: 'Aplicação realizada com sucesso. Clima favorável.',
   },
   {
@@ -52,8 +59,8 @@ export const INITIAL_ACTIVITIES: Activity[] = [
     funcionario: 'Maria Santos',
     talhao: 'Talhão 03',
     cultura: 'Soja',
-    dataInicio: '2025-01-20',
-    dataFim: '2025-01-22',
+    dataInicio: getDateString(-2),
+    dataFim: getDateString(2),
     status: 'Em Andamento',
     prioridade: 'Urgente',
     observacoes: 'Plantio em andamento, previsão de conclusão para amanhã.',
@@ -66,8 +73,8 @@ export const INITIAL_ACTIVITIES: Activity[] = [
     funcionario: 'Pedro Oliveira',
     talhao: 'Talhão 05',
     cultura: 'Milho',
-    dataInicio: '2025-01-18',
-    dataFim: '2025-01-18',
+    dataInicio: getDateString(-5),
+    dataFim: getDateString(-3), // Esta estará atrasada (3 dias atrás)
     status: 'Pendente',
     prioridade: 'Média',
   },
@@ -79,8 +86,8 @@ export const INITIAL_ACTIVITIES: Activity[] = [
     funcionario: 'Ana Costa',
     talhao: 'Talhão 02',
     cultura: 'Milho',
-    dataInicio: '2025-01-25',
-    dataFim: '2025-01-28',
+    dataInicio: getDateString(5),
+    dataFim: getDateString(8),
     status: 'Pendente',
     prioridade: 'Alta',
   },
@@ -92,8 +99,8 @@ export const INITIAL_ACTIVITIES: Activity[] = [
     funcionario: 'Carlos Ferreira',
     talhao: 'Talhão 04',
     cultura: 'Soja',
-    dataInicio: '2025-01-22',
-    dataFim: '2025-01-22',
+    dataInicio: getDateString(0),
+    dataFim: getDateString(1),
     status: 'Em Andamento',
     prioridade: 'Média',
   },

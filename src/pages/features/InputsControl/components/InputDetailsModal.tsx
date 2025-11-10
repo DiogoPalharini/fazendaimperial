@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import AddMovementModal from './AddMovementModal'
 import type { InputItem, MovementEntry } from '../types'
+import { formatCurrency, formatDateTime } from '../utils'
 import '../InputsControl.css'
 
 type InputDetailsModalProps = {
@@ -10,9 +11,6 @@ type InputDetailsModalProps = {
   onClose: () => void
   onSaveMovement: (movement: Omit<MovementEntry, 'id' | 'itemNome' | 'unidade'>) => void
 }
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDateTime = (value: string) => new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
 export default function InputDetailsModal({
   item,

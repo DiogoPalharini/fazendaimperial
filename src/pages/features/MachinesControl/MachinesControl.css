@@ -1011,3 +1011,391 @@
   }
 }
 
+/* Abas */
+.machines-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #eee7d8;
+  margin-bottom: 24px;
+}
+
+.machines-tabs button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(74, 63, 53, 0.7);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.machines-tabs button:hover {
+  color: var(--brown);
+  background: #faf9f6;
+}
+
+.machines-tabs button.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+/* Monitoramento em Tempo Real */
+.realtime-monitoring {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.realtime-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.realtime-header h3 {
+  margin: 0;
+  color: var(--brown);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.realtime-header p {
+  margin: 8px 0 0;
+  color: rgba(74, 63, 53, 0.75);
+  font-size: 0.95rem;
+}
+
+.realtime-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fff 0%, #fefcf9 100%);
+  border: 1.5px solid #eee7d8;
+  border-radius: 12px;
+}
+
+.stat-item span {
+  font-size: 0.85rem;
+  color: rgba(74, 63, 53, 0.7);
+}
+
+.stat-item strong {
+  font-size: 1.5rem;
+  color: var(--brown);
+  font-weight: 700;
+}
+
+.realtime-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  min-height: 600px;
+}
+
+.realtime-map-section {
+  background: #fff;
+  border: 1.5px solid #eee7d8;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.tractor-map-container {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+.realtime-panel-section {
+  background: #fff;
+  border: 1.5px solid #eee7d8;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  overflow-y: auto;
+  max-height: 600px;
+}
+
+.no-tractor-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 20px;
+  text-align: center;
+  color: rgba(74, 63, 53, 0.6);
+}
+
+.no-tractor-selected svg {
+  color: rgba(74, 63, 53, 0.4);
+}
+
+.no-tractor-selected h4 {
+  margin: 0;
+  color: var(--brown);
+  font-size: 1.2rem;
+}
+
+.no-tractor-selected p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Painel de Telemetria */
+.tractor-telemetry-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #eee7d8;
+}
+
+.telemetry-header h3 {
+  margin: 0;
+  color: var(--brown);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.telemetry-header p {
+  margin: 4px 0 0;
+  color: rgba(74, 63, 53, 0.7);
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1.5px solid;
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.telemetry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #faf9f6;
+  border: 1px solid #eee7d8;
+  border-radius: 12px;
+  position: relative;
+}
+
+.telemetry-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.telemetry-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.telemetry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.telemetry-label {
+  font-size: 0.85rem;
+  color: rgba(74, 63, 53, 0.7);
+  font-weight: 500;
+}
+
+.telemetry-value {
+  font-size: 1.4rem;
+  color: var(--brown);
+  font-weight: 700;
+}
+
+.telemetry-sub {
+  font-size: 0.8rem;
+  color: rgba(74, 63, 53, 0.6);
+}
+
+.telemetry-progress {
+  width: 100%;
+  height: 6px;
+  background: #eee7d8;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.telemetry-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Lista de Tratores */
+.tractors-list {
+  margin-top: 24px;
+}
+
+.tractors-list h4 {
+  margin: 0 0 16px;
+  color: var(--brown);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.tractors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.tractor-card {
+  background: #fff;
+  border: 1.5px solid #eee7d8;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tractor-card:hover {
+  border-color: var(--green);
+  box-shadow: 0 4px 12px rgba(58, 125, 68, 0.15);
+  transform: translateY(-2px);
+}
+
+.tractor-card.selected {
+  border-color: var(--green);
+  background: #f0f7f1;
+  box-shadow: 0 4px 12px rgba(58, 125, 68, 0.2);
+}
+
+.tractor-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tractor-card-header strong {
+  color: var(--brown);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.status-badge-small {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.tractor-card-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.tractor-card-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tractor-card-info span {
+  font-size: 0.8rem;
+  color: rgba(74, 63, 53, 0.7);
+}
+
+.tractor-card-info strong {
+  font-size: 1rem;
+  color: var(--brown);
+  font-weight: 600;
+}
+
+/* Popup do mapa */
+.tractor-popup {
+  min-width: 200px;
+}
+
+.tractor-popup strong {
+  color: var(--brown);
+  font-size: 1rem;
+}
+
+.tractor-popup span {
+  color: rgba(74, 63, 53, 0.7);
+  font-size: 0.9rem;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .realtime-content {
+    grid-template-columns: 1fr;
+  }
+
+  .realtime-map-section {
+    min-height: 400px;
+  }
+
+  .realtime-panel-section {
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .machines-tabs {
+    flex-wrap: wrap;
+  }
+
+  .machines-tabs button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .realtime-header {
+    flex-direction: column;
+  }
+
+  .realtime-stats {
+    width: 100%;
+  }
+
+  .tractors-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

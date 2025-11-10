@@ -2,16 +2,16 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import type { Invoice, InvoiceType, InvoiceProduct } from '../types'
 import { INVOICE_TYPES, CLIENTES, FORNECEDORES } from '../constants'
-import '../InvoiceGeneration.css'
+import '../Notafiscal.css'
 
-type AddInvoiceModalProps = {
+type AddNotafiscalModalProps = {
   onClose: () => void
   onSave: (invoice: Omit<Invoice, 'id' | 'numero' | 'status'>) => void
 }
 
 const UNIDADES = ['kg', 'L', 'sc', 'un', 'm³', 'm²', 'ton', 'sacas']
 
-export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProps) {
+export default function AddNotafiscalModal({ onClose, onSave }: AddNotafiscalModalProps) {
   const [formState, setFormState] = useState({
     tipo: '' as InvoiceType | '',
     dataEmissao: new Date().toISOString().slice(0, 16),
@@ -110,14 +110,14 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
     setErro(null)
 
     if (!formState.tipo) {
-      setErro('Selecione o tipo de nota fiscal.')
+      setErro('Selecione o tipo de notafiscal.')
       return
     }
 
     // Validações específicas por tipo
     if (formState.tipo === 'Carregamento' || formState.tipo === 'Venda de Grãos' || formState.tipo === 'Venda de Gado' || formState.tipo === 'Venda de Sementes') {
       if (!formState.cliente) {
-        setErro('Cliente é obrigatório para este tipo de nota fiscal.')
+        setErro('Cliente é obrigatório para este tipo de notafiscal.')
         return
       }
       if (formState.produtos.length === 0) {
@@ -128,7 +128,7 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
 
     if (formState.tipo === 'Compra de Insumos' || formState.tipo === 'Compra de Sementes' || formState.tipo === 'Compra de Máquinas') {
       if (!formState.fornecedor) {
-        setErro('Fornecedor é obrigatório para este tipo de nota fiscal.')
+        setErro('Fornecedor é obrigatório para este tipo de notafiscal.')
         return
       }
       if (formState.produtos.length === 0) {
@@ -139,7 +139,7 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
 
     if (formState.tipo === 'Serviços Agrícolas' || formState.tipo === 'Prestação de Serviços') {
       if (!formState.cliente) {
-        setErro('Cliente é obrigatório para este tipo de nota fiscal.')
+        setErro('Cliente é obrigatório para este tipo de notafiscal.')
         return
       }
       if (!formState.servico) {
@@ -180,8 +180,8 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
       >
         <header className="modal-header">
           <div>
-            <h3 className="modal-title">Nova Nota Fiscal</h3>
-            <p className="modal-subtitle">Cadastre uma nova nota fiscal no sistema</p>
+            <h3 className="modal-title">Nova Notafiscal</h3>
+            <p className="modal-subtitle">Cadastre uma nova notafiscal no sistema</p>
           </div>
           <button type="button" className="close-btn" onClick={onClose} aria-label="Fechar">
             <X size={20} />
@@ -193,7 +193,7 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
         <form className="inputs-form" onSubmit={handleSubmit}>
           <div className="form-row">
             <label>
-              Tipo de Nota Fiscal
+              Tipo de Notafiscal
               <select value={formState.tipo} onChange={handleChange('tipo')} required>
                 <option value="" disabled>
                   Selecione o tipo
@@ -438,7 +438,7 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
               <textarea
                 value={formState.observacoes}
                 onChange={handleChange('observacoes')}
-                placeholder="Adicione observações sobre esta nota fiscal..."
+                placeholder="Adicione observações sobre esta notafiscal..."
                 rows={3}
               />
             </label>
@@ -449,7 +449,7 @@ export default function AddInvoiceModal({ onClose, onSave }: AddInvoiceModalProp
               Cancelar
             </button>
             <button type="submit" className="primary-button">
-              Salvar Nota Fiscal
+              Salvar Notafiscal
             </button>
           </footer>
         </form>

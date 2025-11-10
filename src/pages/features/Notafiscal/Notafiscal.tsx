@@ -1,16 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Plus, Search, Filter, FileText, AlertTriangle, Calendar, DollarSign } from 'lucide-react'
-import InvoiceDetailsModal from './components/InvoiceDetailsModal'
-import AddInvoiceModal from './components/AddInvoiceModal'
+import NotafiscalDetailsModal from './components/NotafiscalDetailsModal'
+import AddNotafiscalModal from './components/AddNotafiscalModal'
 import type { Invoice, InvoiceType, InvoiceStatus } from './types'
 import { INITIAL_INVOICES, INVOICE_TYPES } from './constants'
+import { formatCurrency, formatDate } from './utils'
 import '../FeaturePage.css'
-import './InvoiceGeneration.css'
+import './Notafiscal.css'
 
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
-
-export default function InvoiceGeneration() {
+export default function Notafiscal() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<InvoiceType | 'Todas'>('Todas')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'Todos'>('Todos')
@@ -59,8 +57,8 @@ export default function InvoiceGeneration() {
     <div className="inputs-page">
       <header className="inputs-header">
         <div>
-          <h2>Nota Fiscal</h2>
-          <p>Gerencie notas fiscais de diferentes tipos: carregamentos, compras, vendas e serviços agrícolas.</p>
+          <h2>Notafiscal</h2>
+          <p>Gerencie notafiscais de diferentes tipos: carregamentos, compras, vendas e serviços agrícolas.</p>
         </div>
       </header>
 
@@ -68,7 +66,7 @@ export default function InvoiceGeneration() {
         <article className="summary-card">
           <FileText size={24} />
           <div>
-            <span>Total de notas fiscais</span>
+            <span>Total de notafiscais</span>
             <strong>{summary.totalNotas}</strong>
           </div>
         </article>
@@ -129,7 +127,7 @@ export default function InvoiceGeneration() {
 
       <div className="inputs-table-header">
         <button type="button" className="primary-button" onClick={() => setAddInvoiceModalOpen(true)}>
-          <Plus size={18} /> Adicionar Nota Fiscal
+          <Plus size={18} /> Adicionar Notafiscal
         </button>
       </div>
 
@@ -177,7 +175,7 @@ export default function InvoiceGeneration() {
             {filteredInvoices.length === 0 && (
               <tr>
                 <td colSpan={6} className="empty">
-                  Nenhuma nota fiscal corresponde aos filtros selecionados.
+                  Nenhuma notafiscal corresponde aos filtros selecionados.
                 </td>
               </tr>
             )}
@@ -186,14 +184,14 @@ export default function InvoiceGeneration() {
       </section>
 
       {addInvoiceModalOpen && (
-        <AddInvoiceModal
+        <AddNotafiscalModal
           onClose={() => setAddInvoiceModalOpen(false)}
           onSave={handleSaveInvoice}
         />
       )}
 
       {selectedInvoice && (
-        <InvoiceDetailsModal
+        <NotafiscalDetailsModal
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
         />

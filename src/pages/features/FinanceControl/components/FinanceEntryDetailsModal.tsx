@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Calendar, DollarSign, FileText, Building2, Edit, Trash2 } from 'lucide-react'
 import type { FinanceEntry } from '../types'
+import { formatCurrency, formatDate } from '../utils'
 import EditFinanceEntryModal from './EditFinanceEntryModal'
 import '../FinanceControl.css'
 
@@ -10,9 +11,6 @@ type FinanceEntryDetailsModalProps = {
   onEdit: (entry: FinanceEntry) => void
   onDelete: (id: string) => void
 }
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
 
 export default function FinanceEntryDetailsModal({ entry, onClose, onEdit, onDelete }: FinanceEntryDetailsModalProps) {
   const [showEditModal, setShowEditModal] = useState(false)

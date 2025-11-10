@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   Plus,
   Search,
@@ -13,147 +13,30 @@ import {
   Calendar,
   AlertCircle,
   Clock,
+  MapPin,
 } from 'lucide-react'
+import type { Machine, MachineType, MachineStatus, MachineForm, MaintenanceLog, TractorTelemetry } from './types'
+import { MACHINE_TYPES, MACHINE_STATUSES, INITIAL_MACHINES, INITIAL_MAINTENANCE, INITIAL_TELEMETRY, emptyForm } from './constants'
+import { formatHours, formatFuel, formatDate, getMaintenanceStatus } from './utils'
+import TractorMap from './components/TractorMap'
+import TractorTelemetryPanel from './components/TractorTelemetryPanel'
 import './MachinesControl.css'
 
-type MachineStatus = 'Disponível' | 'Em operação' | 'Em manutenção'
-type MachineType = 'Trator' | 'Caminhão' | 'Caminhonete'
-
-type Machine = {
-  id: string
-  nome: string
-  tipo: MachineType
-  identificacao: string
-  status: MachineStatus
-  horasTrabalhadas: number
-  consumoMedio: number
-  ultimaManutencao: string
-  proximaManutencao: string
-}
-
-const MACHINE_TYPES: MachineType[] = ['Trator', 'Caminhão', 'Caminhonete']
-const MACHINE_STATUSES: MachineStatus[] = ['Disponível', 'Em operação', 'Em manutenção']
-
-const INITIAL_MACHINES: Machine[] = [
-  {
-    id: 'm-1',
-    nome: 'Trator Massey 7725',
-    tipo: 'Trator',
-    identificacao: 'AAA1B23',
-    status: 'Em operação',
-    horasTrabalhadas: 2834,
-    consumoMedio: 24.6,
-    ultimaManutencao: '2025-07-16',
-    proximaManutencao: '2025-09-15',
-  },
-  {
-    id: 'm-2',
-    nome: 'Caminhão Volvo FH',
-    tipo: 'Caminhão',
-    identificacao: 'BCX4D56',
-    status: 'Disponível',
-    horasTrabalhadas: 1920,
-    consumoMedio: 32.1,
-    ultimaManutencao: '2025-06-30',
-    proximaManutencao: '2025-10-02',
-  },
-  {
-    id: 'm-3',
-    nome: 'Caminhonete Hilux 4x4',
-    tipo: 'Caminhonete',
-    identificacao: 'HIL-9281',
-    status: 'Em manutenção',
-    horasTrabalhadas: 1120,
-    consumoMedio: 12.4,
-    ultimaManutencao: '2025-08-01',
-    proximaManutencao: '2025-08-28',
-  },
-  {
-    id: 'm-4',
-    nome: 'Trator John Deere 7R',
-    tipo: 'Trator',
-    identificacao: 'JDR-7710',
-    status: 'Disponível',
-    horasTrabalhadas: 3250,
-    consumoMedio: 26.9,
-    ultimaManutencao: '2025-07-02',
-    proximaManutencao: '2025-08-31',
-  },
-]
-
-type MaintenanceLog = {
-  id: string
-  machineId: string
-  machineName: string
-  tipo: 'Revisão' | 'Troca de óleo' | 'Substituição de peças'
-  data: string
-  observacao: string
-}
-
-const INITIAL_MAINTENANCE: MaintenanceLog[] = [
-  {
-    id: 'log-1',
-    machineId: 'm-3',
-    machineName: 'Caminhonete Hilux 4x4',
-    tipo: 'Revisão',
-    data: '2025-08-10',
-    observacao: 'Revisão geral dos 1.000 km e alinhamento da suspensão',
-  },
-  {
-    id: 'log-2',
-    machineId: 'm-1',
-    machineName: 'Trator Massey 7725',
-    tipo: 'Troca de óleo',
-    data: '2025-08-03',
-    observacao: 'Troca de filtros e óleo hidráulico',
-  },
-  {
-    id: 'log-3',
-    machineId: 'm-2',
-    machineName: 'Caminhão Volvo FH',
-    tipo: 'Substituição de peças',
-    data: '2025-07-22',
-    observacao: 'Substituição de pastilhas de freio dianteiras',
-  },
-]
-
-const formatHours = (value: number) => `${value.toLocaleString('pt-BR')} h`
-const formatFuel = (value: number) => `${value.toFixed(1)} L/h`
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
-
-type MachineForm = {
-  id?: string
-  nome: string
-  tipo: MachineType
-  identificacao: string
-  status: MachineStatus
-  horasTrabalhadas: number
-  consumoMedio: number
-  ultimaManutencao: string
-  proximaManutencao: string
-}
-
-const emptyForm: MachineForm = {
-  nome: '',
-  tipo: 'Trator',
-  identificacao: '',
-  status: 'Disponível',
-  horasTrabalhadas: 0,
-  consumoMedio: 0,
-  ultimaManutencao: '',
-  proximaManutencao: '',
-}
-
 export default function MachinesControl() {
+  const [activeTab, setActiveTab] = useState<'controle' | 'tempo-real'>('controle')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<MachineType | 'Todas'>('Todas')
   const [statusFilter, setStatusFilter] = useState<MachineStatus | 'Todos'>('Todos')
   const [machines, setMachines] = useState<Machine[]>(INITIAL_MACHINES)
   const [maintenanceLog, setMaintenanceLog] = useState<MaintenanceLog[]>(INITIAL_MAINTENANCE)
   const [modalOpen, setModalOpen] = useState(false)
-  const [formState, setFormState] = useState<MachineForm>(emptyForm)
+  const [formState, setFormState] = useState<MachineForm>({ ...emptyForm })
   const [detailMachine, setDetailMachine] = useState<Machine | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Machine | null>(null)
+  
+  // Estados para monitoramento em tempo real
+  const [telemetry, setTelemetry] = useState<TractorTelemetry[]>(INITIAL_TELEMETRY)
+  const [selectedTractor, setSelectedTractor] = useState<string | null>(null)
 
   const filteredMachines = useMemo(() => {
     return machines.filter((machine) => {
@@ -178,7 +61,7 @@ export default function MachinesControl() {
   }, [machines])
 
   const openCreateModal = () => {
-    setFormState(emptyForm)
+    setFormState({ ...emptyForm })
     setModalOpen(true)
   }
 
@@ -189,7 +72,7 @@ export default function MachinesControl() {
 
   const closeModal = () => {
     setModalOpen(false)
-    setFormState(emptyForm)
+    setFormState({ ...emptyForm })
   }
 
   const openDetailModal = (machine: Machine) => {
@@ -277,17 +160,61 @@ export default function MachinesControl() {
     }
   }
 
-  const getMaintenanceStatus = (date: string) => {
-    const today = new Date()
-    const maintenanceDate = new Date(date)
-    const diffTime = maintenanceDate.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  // Simular atualização de telemetria em tempo real
+  useEffect(() => {
+    if (activeTab !== 'tempo-real') return
 
-    if (diffDays < 0) return { status: 'overdue', days: Math.abs(diffDays), label: 'Atrasada' }
-    if (diffDays <= 7) return { status: 'urgent', days: diffDays, label: 'Urgente' }
-    if (diffDays <= 30) return { status: 'warning', days: diffDays, label: 'Próxima' }
-    return { status: 'ok', days: diffDays, label: 'Agendada' }
-  }
+    const interval = setInterval(() => {
+      setTelemetry((prev) =>
+        prev.map((tractor) => {
+          if (tractor.status === 'Desligado') return tractor
+
+          // Simular pequenas variações nos dados
+          const variation = () => (Math.random() - 0.5) * 0.1
+
+          return {
+            ...tractor,
+            latitude: tractor.latitude + variation() * 0.0001,
+            longitude: tractor.longitude + variation() * 0.0001,
+            velocidade:
+              tractor.status === 'Em movimento'
+                ? Math.max(0, Math.min(15, tractor.velocidade + variation() * 2))
+                : 0,
+            rotacaoMotor:
+              tractor.status === 'Em movimento'
+                ? Math.max(1500, Math.min(2200, tractor.rotacaoMotor + variation() * 50))
+                : 0,
+            nivelCombustivel: Math.max(0, Math.min(100, tractor.nivelCombustivel - 0.01)),
+            nivelOleo: Math.max(70, Math.min(100, tractor.nivelOleo + variation() * 0.5)),
+            temperaturaMotor:
+              tractor.status === 'Em movimento'
+                ? Math.max(75, Math.min(95, tractor.temperaturaMotor + variation() * 2))
+                : 0,
+            temperaturaHidraulico:
+              tractor.status === 'Em movimento'
+                ? Math.max(60, Math.min(75, tractor.temperaturaHidraulico + variation() * 1))
+                : 0,
+            pressaoOleo:
+              tractor.status === 'Em movimento'
+                ? Math.max(40, Math.min(50, tractor.pressaoOleo + variation() * 2))
+                : 0,
+            horasTrabalho: tractor.horasTrabalho + 0.001,
+            ultimaAtualizacao: new Date().toISOString(),
+          }
+        })
+      )
+    }, 3000) // Atualiza a cada 3 segundos
+
+    return () => clearInterval(interval)
+  }, [activeTab])
+
+  const selectedTractorData = useMemo(() => {
+    return telemetry.find((t) => t.machineId === selectedTractor) || null
+  }, [telemetry, selectedTractor])
+
+  const tractorsInOperation = useMemo(() => {
+    return telemetry.filter((t) => t.status !== 'Desligado')
+  }, [telemetry])
 
   return (
     <div className="machines-page">
@@ -297,6 +224,117 @@ export default function MachinesControl() {
           <p>Cadastre, monitore e planeje manutenções da frota de tratores, caminhões e camionetes.</p>
         </div>
       </header>
+
+      <div className="machines-tabs">
+        <button
+          type="button"
+          className={activeTab === 'controle' ? 'active' : ''}
+          onClick={() => setActiveTab('controle')}
+        >
+          <ClipboardCheck size={18} />
+          Controle
+        </button>
+        <button
+          type="button"
+          className={activeTab === 'tempo-real' ? 'active' : ''}
+          onClick={() => setActiveTab('tempo-real')}
+        >
+          <MapPin size={18} />
+          Tempo Real
+        </button>
+      </div>
+
+      {activeTab === 'tempo-real' && (
+        <div className="realtime-monitoring">
+          <div className="realtime-header">
+            <div>
+              <h3>Monitoramento em Tempo Real</h3>
+              <p>Acompanhe a localização e status dos tratores em operação</p>
+            </div>
+            <div className="realtime-stats">
+              <div className="stat-item">
+                <span>Tratores Ativos</span>
+                <strong>{tractorsInOperation.length}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="realtime-content">
+            <div className="realtime-map-section">
+              <TractorMap
+                tractors={telemetry}
+                selectedTractor={selectedTractor}
+                onTractorClick={(tractor) => setSelectedTractor(tractor.machineId)}
+              />
+            </div>
+
+            <div className="realtime-panel-section">
+              {selectedTractorData ? (
+                <TractorTelemetryPanel tractor={selectedTractorData} />
+              ) : (
+                <div className="no-tractor-selected">
+                  <MapPin size={48} />
+                  <h4>Selecione um trator no mapa</h4>
+                  <p>Clique em um marcador para ver as informações detalhadas</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="tractors-list">
+            <h4>Tratores Monitorados</h4>
+            <div className="tractors-grid">
+              {telemetry.map((tractor) => (
+                <div
+                  key={tractor.machineId}
+                  className={`tractor-card ${selectedTractor === tractor.machineId ? 'selected' : ''}`}
+                  onClick={() => setSelectedTractor(tractor.machineId)}
+                >
+                  <div className="tractor-card-header">
+                    <strong>{tractor.nome}</strong>
+                    <span
+                      className="status-badge-small"
+                      style={{
+                        backgroundColor:
+                          tractor.status === 'Em movimento'
+                            ? '#3a7d4420'
+                            : tractor.status === 'Ligado'
+                            ? '#e9b54320'
+                            : '#99920',
+                        color:
+                          tractor.status === 'Em movimento'
+                            ? '#3a7d44'
+                            : tractor.status === 'Ligado'
+                            ? '#e9b543'
+                            : '#999',
+                      }}
+                    >
+                      {tractor.status}
+                    </span>
+                  </div>
+                  <div className="tractor-card-info">
+                    <div>
+                      <span>Velocidade</span>
+                      <strong>{Math.round(tractor.velocidade * 10) / 10} km/h</strong>
+                    </div>
+                    <div>
+                      <span>Combustível</span>
+                      <strong>{Math.round(tractor.nivelCombustivel)}%</strong>
+                    </div>
+                    <div>
+                      <span>Óleo</span>
+                      <strong>{Math.round(tractor.nivelOleo)}%</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'controle' && (
+        <>
 
       <section className="machines-summary">
         <article className="summary-card">
@@ -727,6 +765,8 @@ export default function MachinesControl() {
             </footer>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import LanguageSelector from '../components/LanguageSelector'
+import { useTranslation } from '../contexts/LanguageContext'
 import './AppLayout.css'
 import { ChevronLeft, Menu } from 'lucide-react'
 
 export default function AppLayout() {
+  const t = useTranslation()
   const MOBILE_BREAKPOINT = 720
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -54,12 +57,13 @@ export default function AppLayout() {
             >
               <MobileToggleIcon size={20} aria-hidden="true" />
             </button>
-            <h1 className="page-title">Fazenda Imperial</h1>
+            <h1 className="page-title">{t('layout.appName')}</h1>
           </div>
           <div className="header-right">
-            <button className="icon-button" type="button" aria-label="Notificações">🔔</button>
+            <LanguageSelector />
+            <button className="icon-button" type="button" aria-label={t('layout.notifications')}>🔔</button>
             <div className="user-chip">
-              <span className="user-name">Olá, Diogo</span>
+              <span className="user-name">{t('layout.hello')}, Diogo</span>
             </div>
           </div>
         </header>

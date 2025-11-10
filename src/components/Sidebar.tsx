@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from '../contexts/LanguageContext'
 import './Sidebar.css'
 import logo from '../assets/icon.png'
 import {
@@ -12,6 +13,9 @@ import {
   Package,
   Wallet,
   ClipboardList,
+  Cloud,
+  Sprout,
+  Users,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -20,16 +24,20 @@ type SidebarProps = {
 }
 
 const menuItems = [
-  { key: 'dashboard', path: '/dashboard', label: 'Visão Geral', Icon: LayoutDashboard },
-  { key: 'truck-loading', path: '/carregamento', label: 'Carregamento de Caminhão', Icon: Truck },
-  { key: 'invoice', path: '/nota-fiscal', label: 'Nota Fiscal', Icon: FileText },
-  { key: 'machines', path: '/maquinas', label: 'Controle de Máquinas', Icon: Tractor },
-  { key: 'inputs', path: '/insumos', label: 'Controle de Insumos', Icon: Package },
-  { key: 'finance', path: '/financeiro', label: 'Controle Financeiro', Icon: Wallet },
-  { key: 'activities', path: '/atividades', label: 'Controle de Atividades', Icon: ClipboardList },
+  { key: 'dashboard', path: '/dashboard', translationKey: 'sidebar.dashboard', Icon: LayoutDashboard },
+  { key: 'truck-loading', path: '/carregamento', translationKey: 'sidebar.truckLoading', Icon: Truck },
+  { key: 'invoice', path: '/nota-fiscal', translationKey: 'sidebar.invoice', Icon: FileText },
+  { key: 'machines', path: '/maquinas', translationKey: 'sidebar.machines', Icon: Tractor },
+  { key: 'inputs', path: '/insumos', translationKey: 'sidebar.inputs', Icon: Package },
+  { key: 'finance', path: '/financeiro', translationKey: 'sidebar.finance', Icon: Wallet },
+  { key: 'activities', path: '/atividades', translationKey: 'sidebar.activities', Icon: ClipboardList },
+  { key: 'meteorologia', path: '/meteorologia', translationKey: 'sidebar.meteorology', Icon: Cloud },
+  { key: 'safra', path: '/safra', translationKey: 'sidebar.harvest', Icon: Sprout },
+  { key: 'users', path: '/usuarios', translationKey: 'sidebar.users', Icon: Users },
 ]
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+  const t = useTranslation()
   const location = useLocation()
   const isActive = (path: string) => location.pathname === path
 
@@ -38,7 +46,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`} aria-expanded={isOpen} aria-label="Menu principal">
       <div className="sidebar-header">
-        <img className="brand-logo" src={logo} alt="Fazenda Imperial" />
+        <img className="brand-logo" src={logo} alt={t('layout.appName')} />
         <button
           type="button"
           className="sidebar-toggle"
@@ -54,15 +62,15 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
       <nav id="sidebar-nav" className="sidebar-nav" aria-label="Navegação principal">
         <ul className="nav-list">
-          {menuItems.map(({ key, path, label, Icon }) => (
+          {menuItems.map(({ key, path, translationKey, Icon }) => (
             <li className="nav-item" key={key}>
               <Link
                 to={path}
                 className={`nav-link ${isActive(path) ? 'active' : ''}`}
-                title={label}
+                title={t(translationKey)}
               >
                 <Icon size={22} aria-hidden="true" className="nav-icon" />
-                <span className="nav-label">{label}</span>
+                <span className="nav-label">{t(translationKey)}</span>
               </Link>
             </li>
           ))}
@@ -70,7 +78,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        <button className="icon-btn" title="Configurações" aria-label="Configurações" type="button">
+        <button className="icon-btn" title={t('layout.settings')} aria-label={t('layout.settings')} type="button">
           <Settings size={22} />
         </button>
       </div>

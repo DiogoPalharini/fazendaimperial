@@ -4,11 +4,9 @@ import AddFinanceEntryModal from './components/AddFinanceEntryModal'
 import FinanceEntryDetailsModal from './components/FinanceEntryDetailsModal'
 import type { FinanceEntry, EntryType, PaymentStatus, CostCenter } from './types'
 import { INITIAL_ENTRIES, ENTRY_TYPES, COST_CENTERS, PAYMENT_STATUSES } from './constants'
+import { formatCurrency, formatDate } from './utils'
 import '../FeaturePage.css'
 import './FinanceControl.css'
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
 
 export default function FinanceControl() {
   const [search, setSearch] = useState('')

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Calendar, User, MapPin, Sprout, Edit, Trash2, AlertCircle } from 'lucide-react'
 import type { Activity } from '../types'
+import { formatDate } from '../utils'
 import EditActivityModal from './EditActivityModal'
 import '../ActivitiesControl.css'
 
@@ -10,8 +11,6 @@ type ActivityDetailsModalProps = {
   onEdit: (activity: Activity) => void
   onDelete: (id: string) => void
 }
-
-const formatDate = (value: string) => new Date(value).toLocaleDateString('pt-BR')
 
 export default function ActivityDetailsModal({ activity, onClose, onEdit, onDelete }: ActivityDetailsModalProps) {
   const [showEditModal, setShowEditModal] = useState(false)

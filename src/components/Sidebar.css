@@ -11,17 +11,20 @@
   flex-direction: column;
   width: 260px;
   min-width: 260px;
+  max-width: 260px;
   min-height: 100vh;
   background: #fff;
   border-right: 1px solid #eee7d8;
   padding: 24px 20px;
   gap: 24px;
   transition: width 220ms ease, padding 220ms ease, transform 220ms ease;
+  overflow: hidden;
 }
 
 .sidebar.closed {
   width: 78px;
   min-width: 78px;
+  max-width: 78px;
   padding: 24px 12px;
   align-items: center;
 }
@@ -89,7 +92,7 @@
 
 .nav-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
@@ -98,6 +101,7 @@
   font-weight: 600;
   border: 1px solid transparent;
   transition: background 160ms ease, border 160ms ease, color 160ms ease;
+  min-width: 0;
 }
 
 .nav-link:hover { background: #f3efe4; }
@@ -110,8 +114,19 @@
   box-shadow: 0 8px 20px rgba(58, 125, 68, 0.12);
 }
 
-.nav-icon { flex-shrink: 0; }
-.nav-label { white-space: nowrap; }
+.nav-icon { 
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.nav-label { 
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1;
+}
 
 .sidebar.closed .nav-link {
   justify-content: center;

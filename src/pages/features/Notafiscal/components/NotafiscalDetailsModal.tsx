@@ -1,16 +1,14 @@
 import { X, FileText, Calendar, User, Building2, Truck, DollarSign } from 'lucide-react'
 import type { Invoice } from '../types'
-import '../InvoiceGeneration.css'
+import { formatCurrency, formatDateTime } from '../utils'
+import '../Notafiscal.css'
 
-type InvoiceDetailsModalProps = {
+type NotafiscalDetailsModalProps = {
   invoice: Invoice
   onClose: () => void
 }
 
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const formatDateTime = (value: string) => new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-
-export default function InvoiceDetailsModal({ invoice, onClose }: InvoiceDetailsModalProps) {
+export default function NotafiscalDetailsModal({ invoice, onClose }: NotafiscalDetailsModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
@@ -21,7 +19,7 @@ export default function InvoiceDetailsModal({ invoice, onClose }: InvoiceDetails
       >
         <header className="modal-header">
           <div>
-            <h3 className="modal-title">Detalhes da Nota Fiscal</h3>
+            <h3 className="modal-title">Detalhes da Notafiscal</h3>
             <p className="modal-subtitle">{invoice.numero}</p>
           </div>
           <button type="button" className="close-btn" onClick={onClose} aria-label="Fechar">
