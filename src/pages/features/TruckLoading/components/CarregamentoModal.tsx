@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent, useState } from 'react'
+import { X } from 'lucide-react'
 import type { Carregamento, CarregamentoForm } from '../types'
 import {
   AVAILABLE_TRUCKS,
@@ -59,8 +60,23 @@ export default function CarregamentoModal({ onClose, onSave }: CarregamentoModal
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="modal-title">Novo Carregamento</h3>
+        <header>
+          <div>
+            <h3>Novo Carregamento</h3>
+            <p>Preencha os dados para cadastrar um novo carregamento</p>
+          </div>
+          <button
+            type="button"
+            className="close-btn"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <X size={20} />
+          </button>
+        </header>
+
         {erro && <div className="modal-error">{erro}</div>}
+        
         <form onSubmit={handleSubmit}>
           <div className="modal-grid">
             <div className="field">
@@ -248,14 +264,14 @@ export default function CarregamentoModal({ onClose, onSave }: CarregamentoModal
             </div>
           </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn secondary" onClick={onClose}>
+          <footer>
+            <button type="button" className="secondary-button" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn primary">
+            <button type="submit" className="primary-button">
               Salvar carregamento
             </button>
-          </div>
+          </footer>
         </form>
       </div>
     </div>

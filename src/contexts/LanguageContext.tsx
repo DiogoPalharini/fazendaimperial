@@ -57,6 +57,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.finance': 'Controle Financeiro',
     'sidebar.activities': 'Controle de Atividades',
     'sidebar.meteorology': 'Meteorologia',
+    'sidebar.soil': 'Análise de Solo',
     'sidebar.harvest': 'Gestão de Safras',
     'sidebar.users': 'Administração de Usuários',
     
@@ -142,6 +143,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.finance': 'Finance Control',
     'sidebar.activities': 'Activities Control',
     'sidebar.meteorology': 'Meteorology',
+    'sidebar.soil': 'Soil Analysis',
     'sidebar.harvest': 'Harvest Management',
     'sidebar.users': 'User Administration',
     

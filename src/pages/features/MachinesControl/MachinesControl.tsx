@@ -15,7 +15,7 @@ import {
   Clock,
   MapPin,
 } from 'lucide-react'
-import type { Machine, MachineType, MachineStatus, MachineForm, MaintenanceLog, TractorTelemetry } from './types'
+import type { Machine, MachineType, MachineStatus, MachineForm, MaintenanceLog, TractorTelemetry, ScheduledMaintenance } from './types'
 import { MACHINE_TYPES, MACHINE_STATUSES, INITIAL_MACHINES, INITIAL_MAINTENANCE, INITIAL_TELEMETRY, emptyForm } from './constants'
 import { formatHours, formatFuel, formatDate, getMaintenanceStatus } from './utils'
 import TractorMap from './components/TractorMap'
@@ -29,10 +29,18 @@ export default function MachinesControl() {
   const [statusFilter, setStatusFilter] = useState<MachineStatus | 'Todos'>('Todos')
   const [machines, setMachines] = useState<Machine[]>(INITIAL_MACHINES)
   const [maintenanceLog, setMaintenanceLog] = useState<MaintenanceLog[]>(INITIAL_MAINTENANCE)
+  const [scheduledMaintenances, setScheduledMaintenances] = useState<ScheduledMaintenance[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [formState, setFormState] = useState<MachineForm>({ ...emptyForm })
   const [detailMachine, setDetailMachine] = useState<Machine | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Machine | null>(null)
+  const [detailTab, setDetailTab] = useState<'scheduled' | 'history'>('scheduled')
+  const [scheduleMaintenanceModalOpen, setScheduleMaintenanceModalOpen] = useState(false)
+  const [scheduleForm, setScheduleForm] = useState<{ tipo: ScheduledMaintenance['tipo'], dataAgendada: string, observacao: string }>({
+    tipo: 'Revisão',
+    dataAgendada: '',
+    observacao: '',
+  })
   
   // Estados para monitoramento em tempo real
   const [telemetry, setTelemetry] = useState<TractorTelemetry[]>(INITIAL_TELEMETRY)
@@ -81,6 +89,7 @@ export default function MachinesControl() {
 
   const closeDetailModal = () => {
     setDetailMachine(null)
+    setDetailTab('scheduled')
   }
 
   const handleChange = (field: keyof MachineForm) => (
@@ -111,44 +120,6 @@ export default function MachinesControl() {
     }
 
     closeModal()
-  }
-
-  const scheduleMaintenance = (machine: Machine) => {
-    const today = new Date()
-    const next = new Date(today)
-    next.setDate(today.getDate() + 30)
-
-    setMachines((prev) => prev.map((m) => (
-      m.id === machine.id
-        ? {
-            ...m,
-            status: 'Em manutenção',
-            ultimaManutencao: today.toISOString().slice(0, 10),
-            proximaManutencao: next.toISOString().slice(0, 10),
-          }
-        : m
-    )))
-
-    setMaintenanceLog((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        machineId: machine.id,
-        machineName: machine.nome,
-        tipo: 'Revisão',
-        data: today.toISOString().slice(0, 10),
-        observacao: 'Manutenção programada diretamente pelo operador.',
-      },
-      ...prev,
-    ])
-
-    if (detailMachine?.id === machine.id) {
-      setDetailMachine({
-        ...machine,
-        status: 'Em manutenção',
-        ultimaManutencao: today.toISOString().slice(0, 10),
-        proximaManutencao: next.toISOString().slice(0, 10),
-      })
-    }
   }
 
   const handleDelete = (machine: Machine) => {
@@ -420,7 +391,21 @@ export default function MachinesControl() {
           </thead>
           <tbody>
             {filteredMachines.map((machine) => {
-              const maintenanceStatus = getMaintenanceStatus(machine.proximaManutencao)
+              // Verificar se há manutenções agendadas para esta máquina
+              const scheduledForMachine = scheduledMaintenances
+                .filter((m) => m.machineId === machine.id && m.status === 'Agendada')
+                .sort((a, b) => new Date(a.dataAgendada).getTime() - new Date(b.dataAgendada).getTime())
+              
+              const nextScheduled = scheduledForMachine[0]
+              const hasScheduledMaintenances = scheduledForMachine.length > 0
+              
+              // Só calcular status se houver manutenção agendada
+              const maintenanceStatus = nextScheduled 
+                ? getMaintenanceStatus(nextScheduled.dataAgendada)
+                : null
+              
+              const displayDate = nextScheduled ? nextScheduled.dataAgendada : machine.proximaManutencao
+              
               return (
                 <tr key={machine.id} className="machines-row">
                   <td
@@ -446,13 +431,23 @@ export default function MachinesControl() {
                   </td>
                   <td>
                     <div className="maintenance-cell">
-                      <span>{formatDate(machine.proximaManutencao)}</span>
-                      {maintenanceStatus.status !== 'ok' && (
-                        <span className={`maintenance-badge maintenance-${maintenanceStatus.status}`}>
-                          {maintenanceStatus.status === 'overdue' && <AlertCircle size={12} />}
-                          {maintenanceStatus.status === 'urgent' && <Clock size={12} />}
-                          {maintenanceStatus.days === 0 ? 'Hoje' : `${maintenanceStatus.days}d`}
-                        </span>
+                      {hasScheduledMaintenances ? (
+                        <>
+                          <span>{formatDate(displayDate)}</span>
+                          <span className="maintenance-badge scheduled" title={`${scheduledForMachine.length} manutenção(ões) agendada(s)`}>
+                            <Calendar size={12} />
+                            {scheduledForMachine.length}
+                          </span>
+                          {maintenanceStatus && maintenanceStatus.status !== 'ok' && (
+                            <span className={`maintenance-badge maintenance-${maintenanceStatus.status}`}>
+                              {maintenanceStatus.status === 'overdue' && <AlertCircle size={12} />}
+                              {maintenanceStatus.status === 'urgent' && <Clock size={12} />}
+                              {maintenanceStatus.days === 0 ? 'Hoje' : `${maintenanceStatus.days}d`}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>{formatDate(machine.proximaManutencao)}</span>
                       )}
                     </div>
                   </td>
@@ -470,7 +465,10 @@ export default function MachinesControl() {
                       <button
                         type="button"
                         className="action-btn maintenance"
-                        onClick={() => scheduleMaintenance(machine)}
+                        onClick={() => {
+                          openDetailModal(machine)
+                          setDetailTab('scheduled')
+                        }}
                         title="Agendar manutenção"
                         aria-label="Agendar manutenção"
                       >
@@ -499,26 +497,6 @@ export default function MachinesControl() {
         </table>
       </section>
 
-      <section className="maintenance-log">
-        <header>
-          <h3>Histórico recente de manutenções</h3>
-          <span>{maintenanceLog.length} registros</span>
-        </header>
-        <ul>
-          {maintenanceLog.map((log) => (
-            <li key={log.id}>
-              <div>
-                <strong>{log.tipo}</strong>
-                <span>{log.machineName}</span>
-              </div>
-              <div>
-                <time>{formatDate(log.data)}</time>
-                <p>{log.observacao}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       {modalOpen && (
         <div className="machine-modal" role="dialog" aria-modal="true">
@@ -634,89 +612,129 @@ export default function MachinesControl() {
           <div className="machine-details-modal__card">
             <header>
               <div>
-                <h3>Detalhes da máquina</h3>
-                <p>Confira todas as informações cadastradas antes de realizar ações.</p>
+                <h3>{detailMachine.nome}</h3>
+                <p>{detailMachine.identificacao} • {detailMachine.tipo}</p>
               </div>
               <button type="button" className="close-btn" onClick={closeDetailModal} aria-label="Fechar">
                 <X size={20} />
               </button>
             </header>
 
-            <div className="machine-details-grid">
-              <div>
-                <span className="label">Nome</span>
-                <strong>{detailMachine.nome}</strong>
-              </div>
-              <div>
-                <span className="label">Tipo</span>
-                <strong>{detailMachine.tipo}</strong>
-              </div>
-              <div>
-                <span className="label">Identificação</span>
-                <strong>{detailMachine.identificacao}</strong>
-              </div>
-              <div>
-                <span className="label">Status</span>
-                <span className={`status-chip status-${detailMachine.status.replace(' ', '-').toLowerCase()}`}>
-                  {detailMachine.status}
-                </span>
-              </div>
-              <div>
-                <span className="label">Horas trabalhadas</span>
-                <strong>{formatHours(detailMachine.horasTrabalhadas)}</strong>
-              </div>
-              <div>
-                <span className="label">Consumo médio</span>
-                <strong>{formatFuel(detailMachine.consumoMedio)}</strong>
-              </div>
-              <div>
-                <span className="label">Última manutenção</span>
-                <strong>{formatDate(detailMachine.ultimaManutencao)}</strong>
-              </div>
-              <div>
-                <span className="label">Próxima manutenção</span>
-                <strong>{formatDate(detailMachine.proximaManutencao)}</strong>
+            <div className="machine-details-info">
+              <div className="machine-info-grid">
+                <div>
+                  <span className="label">Status</span>
+                  <span className={`status-chip status-${detailMachine.status.replace(' ', '-').toLowerCase()}`}>
+                    {detailMachine.status}
+                  </span>
+                </div>
+                <div>
+                  <span className="label">Horas trabalhadas</span>
+                  <strong>{formatHours(detailMachine.horasTrabalhadas)}</strong>
+                </div>
+                <div>
+                  <span className="label">Consumo médio</span>
+                  <strong>{formatFuel(detailMachine.consumoMedio)}</strong>
+                </div>
+                <div>
+                  <span className="label">Última manutenção</span>
+                  <strong>{formatDate(detailMachine.ultimaManutencao)}</strong>
+                </div>
               </div>
             </div>
 
-            <div className="machine-details-actions">
-              <div className="maintenance-status-info">
-                {(() => {
-                  const maintenanceStatus = getMaintenanceStatus(detailMachine.proximaManutencao)
-                  if (maintenanceStatus.status !== 'ok') {
-                    return (
-                      <div className={`maintenance-alert maintenance-${maintenanceStatus.status}`}>
-                        <AlertCircle size={18} />
-                        <div>
-                          <strong>Manutenção {maintenanceStatus.label}</strong>
-                          <span>
-                            {maintenanceStatus.status === 'overdue'
-                              ? `${maintenanceStatus.days} dias atrasada`
-                              : `Em ${maintenanceStatus.days} dias`}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  }
-                  return null
-                })()}
-              </div>
+            <div className="maintenance-tabs">
+              <button
+                type="button"
+                className={`maintenance-tab ${detailTab === 'scheduled' ? 'active' : ''}`}
+                onClick={() => setDetailTab('scheduled')}
+              >
+                <Calendar size={18} />
+                Manutenções Agendadas
+              </button>
+              <button
+                type="button"
+                className={`maintenance-tab ${detailTab === 'history' ? 'active' : ''}`}
+                onClick={() => setDetailTab('history')}
+              >
+                <ClipboardCheck size={18} />
+                Histórico
+              </button>
+            </div>
+
+            <div className="maintenance-content">
+              {detailTab === 'scheduled' && (
+                <div className="scheduled-maintenance-tab">
+                  <div className="scheduled-maintenance-header">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => {
+                        setScheduleForm({ tipo: 'Revisão', dataAgendada: '', observacao: '' })
+                        setScheduleMaintenanceModalOpen(true)
+                      }}
+                    >
+                      <Plus size={16} />
+                      Agendar Manutenção
+                    </button>
+                  </div>
+                  <ul className="scheduled-maintenance-list">
+                    {scheduledMaintenances
+                      .filter((m) => m.machineId === detailMachine.id && m.status !== 'Concluída' && m.status !== 'Cancelada')
+                      .map((maintenance) => (
+                        <li key={maintenance.id} className="scheduled-maintenance-item">
+                          <div className="maintenance-item-header">
+                            <div>
+                              <strong>{maintenance.tipo}</strong>
+                              <span className={`maintenance-status-badge ${maintenance.status.toLowerCase().replace(' ', '-')}`}>
+                                {maintenance.status}
+                              </span>
+                            </div>
+                            <span className="maintenance-date">{formatDate(maintenance.dataAgendada)}</span>
+                          </div>
+                          {maintenance.observacao && <p>{maintenance.observacao}</p>}
+                        </li>
+                      ))}
+                    {scheduledMaintenances.filter((m) => m.machineId === detailMachine.id && m.status !== 'Concluída' && m.status !== 'Cancelada').length === 0 && (
+                      <li className="empty-state">
+                        <Calendar size={24} />
+                        <p>Nenhuma manutenção agendada</p>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {detailTab === 'history' && (
+                <div className="maintenance-history-tab">
+                  <ul className="maintenance-history-list">
+                    {maintenanceLog
+                      .filter((log) => log.machineId === detailMachine.id)
+                      .map((log) => (
+                        <li key={log.id} className="maintenance-history-item">
+                          <div className="maintenance-history-header">
+                            <div>
+                              <strong>{log.tipo}</strong>
+                              <time>{formatDate(log.data)}</time>
+                            </div>
+                          </div>
+                          {log.observacao && <p>{log.observacao}</p>}
+                        </li>
+                      ))}
+                    {maintenanceLog.filter((log) => log.machineId === detailMachine.id).length === 0 && (
+                      <li className="empty-state">
+                        <ClipboardCheck size={24} />
+                        <p>Nenhuma manutenção registrada</p>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <footer>
               <button type="button" className="secondary-button" onClick={closeDetailModal}>
                 Fechar
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => {
-                  if (!detailMachine) return
-                  scheduleMaintenance(detailMachine)
-                }}
-              >
-                <Calendar size={16} />
-                Agendar manutenção
               </button>
               <button
                 type="button"
@@ -732,6 +750,99 @@ export default function MachinesControl() {
                 Editar máquina
               </button>
             </footer>
+          </div>
+        </div>
+      )}
+
+      {scheduleMaintenanceModalOpen && detailMachine && (
+        <div className="machine-modal machine-modal--schedule" role="dialog" aria-modal="true">
+          <div className="machine-modal__card schedule-maintenance-modal">
+            <header>
+              <div>
+                <h3>Agendar Manutenção</h3>
+                <p>Agende uma nova manutenção para {detailMachine.nome}</p>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setScheduleMaintenanceModalOpen(false)}
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!scheduleForm.dataAgendada) return
+
+                const newScheduled: ScheduledMaintenance = {
+                  id: `sched-${Date.now()}`,
+                  machineId: detailMachine.id,
+                  tipo: scheduleForm.tipo,
+                  dataAgendada: scheduleForm.dataAgendada,
+                  observacao: scheduleForm.observacao || undefined,
+                  status: 'Agendada',
+                }
+
+                setScheduledMaintenances((prev) => [newScheduled, ...prev])
+                setScheduleMaintenanceModalOpen(false)
+                setScheduleForm({ tipo: 'Revisão', dataAgendada: '', observacao: '' })
+              }}
+            >
+              <div className="form-group">
+                <label htmlFor="schedule-tipo">Tipo de manutenção</label>
+                <select
+                  id="schedule-tipo"
+                  value={scheduleForm.tipo}
+                  onChange={(e) => setScheduleForm((prev) => ({ ...prev, tipo: e.target.value as ScheduledMaintenance['tipo'] }))}
+                  required
+                >
+                  <option value="Revisão">Revisão</option>
+                  <option value="Troca de óleo">Troca de óleo</option>
+                  <option value="Substituição de peças">Substituição de peças</option>
+                  <option value="Inspeção">Inspeção</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="schedule-data">Data agendada</label>
+                <input
+                  id="schedule-data"
+                  type="date"
+                  value={scheduleForm.dataAgendada}
+                  onChange={(e) => setScheduleForm((prev) => ({ ...prev, dataAgendada: e.target.value }))}
+                  required
+                  min={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="schedule-observacao">Observação (opcional)</label>
+                <textarea
+                  id="schedule-observacao"
+                  value={scheduleForm.observacao}
+                  onChange={(e) => setScheduleForm((prev) => ({ ...prev, observacao: e.target.value }))}
+                  rows={3}
+                  placeholder="Descreva o que será feito na manutenção..."
+                />
+              </div>
+
+              <footer>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setScheduleMaintenanceModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="primary-button">
+                  <Calendar size={16} />
+                  Agendar
+                </button>
+              </footer>
+            </form>
           </div>
         </div>
       )}

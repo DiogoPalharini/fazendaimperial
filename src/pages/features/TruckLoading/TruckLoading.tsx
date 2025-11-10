@@ -119,8 +119,10 @@ export default function TruckLoading() {
             </select>
           </div>
         </div>
+      </div>
 
-        <button className="add-button" onClick={() => setModalOpen(true)}>
+      <div className="loading-actions">
+        <button type="button" className="add-button" onClick={() => setModalOpen(true)}>
           <Plus size={20} />
           Adicionar Carregamento
         </button>

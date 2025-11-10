@@ -259,8 +259,10 @@ export default function UsersControl() {
             </select>
           </div>
         </div>
+      </div>
 
-        <button className="primary-button create-user-button" onClick={handleOpenAddModal}>
+      <div className="users-actions">
+        <button type="button" className="primary-button create-user-button" onClick={handleOpenAddModal}>
           <Plus size={20} />
           {t('users.createUser')}
         </button>

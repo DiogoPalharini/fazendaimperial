@@ -357,6 +357,13 @@
   border: 1px solid rgba(107, 158, 75, 0.3);
 }
 
+.maintenance-badge.scheduled {
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.2) 0%, rgba(74, 144, 226, 0.15) 100%);
+  color: #4a90e2;
+  border: 1px solid rgba(74, 144, 226, 0.3);
+  animation: none;
+}
+
 .table-actions {
   display: flex;
   gap: 6px;
@@ -496,76 +503,6 @@
   color: rgba(74, 63, 53, 0.6);
 }
 
-.maintenance-log {
-  background: linear-gradient(135deg, #fff 0%, #fefcf9 100%);
-  border: 1.5px solid #eee7d8;
-  border-radius: 20px;
-  padding: 24px 26px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.maintenance-log header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.maintenance-log h3 {
-  margin: 0;
-  color: var(--brown);
-}
-
-.maintenance-log span {
-  color: rgba(74, 63, 53, 0.65);
-}
-
-.maintenance-log ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.maintenance-log li {
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid #f0ece1;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-  margin-bottom: 4px;
-}
-
-.maintenance-log li:hover {
-  background: rgba(248, 245, 237, 0.5);
-  transform: translateX(4px);
-}
-
-.maintenance-log li:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-.maintenance-log li div:first-child strong {
-  display: block;
-  color: var(--brown);
-}
-
-.maintenance-log time {
-  display: block;
-  font-size: 0.9rem;
-  color: rgba(74, 63, 53, 0.7);
-}
-
-.maintenance-log p {
-  margin: 4px 0 0;
-  color: rgba(74, 63, 53, 0.75);
-  max-width: 420px;
-}
 
 .machine-modal {
   position: fixed;
@@ -578,6 +515,13 @@
   z-index: 30;
   padding: 20px;
   animation: fadeIn 0.2s ease-out;
+  overflow-y: auto;
+}
+
+.machine-modal--schedule {
+  z-index: 40;
+  align-items: flex-start;
+  padding-top: 60px;
 }
 
 .machine-modal__card {
@@ -591,6 +535,151 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
   border: 1.5px solid rgba(255, 255, 255, 0.8);
   animation: slideUp 0.3s ease-out;
+}
+
+.schedule-maintenance-modal {
+  width: min(450px, 100%);
+  padding: 24px;
+  gap: 20px;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, #fefcf9 100%);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+}
+
+.schedule-maintenance-modal header {
+  margin-bottom: 4px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(238, 231, 216, 0.4);
+}
+
+.schedule-maintenance-modal header h3 {
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+  color: var(--brown);
+  font-weight: 700;
+  position: relative;
+  padding-left: 12px;
+}
+
+.schedule-maintenance-modal header h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-secondary) 100%);
+  border-radius: 2px;
+}
+
+.schedule-maintenance-modal header p {
+  font-size: 0.9rem;
+  margin: 0;
+  color: rgba(74, 63, 53, 0.7);
+  padding-left: 12px;
+}
+
+.schedule-maintenance-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.schedule-maintenance-modal .form-group {
+  margin-bottom: 0;
+}
+
+.schedule-maintenance-modal .form-group label {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--brown);
+  font-weight: 600;
+  display: block;
+}
+
+.schedule-maintenance-modal .form-group input,
+.schedule-maintenance-modal .form-group select,
+.schedule-maintenance-modal .form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  border: 1.5px solid rgba(238, 231, 216, 0.8);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--brown);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.schedule-maintenance-modal .form-group input:focus,
+.schedule-maintenance-modal .form-group select:focus,
+.schedule-maintenance-modal .form-group textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(58, 125, 68, 0.1);
+  background: #ffffff;
+}
+
+.schedule-maintenance-modal .form-group input:hover,
+.schedule-maintenance-modal .form-group select:hover,
+.schedule-maintenance-modal .form-group textarea:hover {
+  border-color: rgba(58, 125, 68, 0.4);
+}
+
+.schedule-maintenance-modal textarea {
+  resize: vertical;
+  min-height: 80px;
+  max-height: 120px;
+  padding: 12px 16px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.schedule-maintenance-modal footer {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 2px solid rgba(238, 231, 216, 0.4);
+  gap: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.schedule-maintenance-modal footer button {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.schedule-maintenance-modal footer .secondary-button {
+  background: linear-gradient(135deg, rgba(248, 245, 237, 0.9) 0%, rgba(240, 237, 228, 0.9) 100%);
+  border: 1.5px solid rgba(238, 231, 216, 0.8);
+  color: var(--brown);
+}
+
+.schedule-maintenance-modal footer .secondary-button:hover {
+  background: linear-gradient(135deg, rgba(248, 245, 237, 1) 0%, rgba(240, 237, 228, 1) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-maintenance-modal footer .primary-button {
+  background: linear-gradient(135deg, var(--green) 0%, #2f6336 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 12px rgba(58, 125, 68, 0.3);
+}
+
+.schedule-maintenance-modal footer .primary-button:hover {
+  background: linear-gradient(135deg, #356e3d 0%, #2a5630 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(58, 125, 68, 0.4);
 }
 
 @keyframes slideUp {
@@ -729,6 +818,7 @@
   padding: 20px;
   z-index: 35;
   animation: fadeIn 0.2s ease-out;
+  overflow-y: auto;
 }
 
 .machine-details-modal__card {
@@ -736,12 +826,15 @@
   border-radius: 24px;
   padding: 28px 32px;
   width: min(640px, 100%);
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
   border: 1.5px solid rgba(255, 255, 255, 0.8);
   animation: slideUp 0.3s ease-out;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .machine-details-modal__card header {
@@ -761,24 +854,185 @@
   color: rgba(74, 63, 53, 0.72);
 }
 
-.machine-details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+.machine-details-info {
+  margin-bottom: 8px;
 }
 
-.machine-details-grid .label {
+.machine-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(248, 245, 237, 0.5) 0%, rgba(248, 245, 237, 0.2) 100%);
+  border-radius: 12px;
+}
+
+.machine-info-grid .label {
   display: block;
   color: rgba(74, 63, 53, 0.65);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
 
-.machine-details-grid strong {
+.machine-info-grid strong {
   display: block;
   color: var(--brown);
   font-size: 1.05rem;
+}
+
+/* Maintenance Tabs */
+.maintenance-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid rgba(238, 231, 216, 0.5);
+  margin-bottom: 16px;
+}
+
+.maintenance-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: rgba(74, 63, 53, 0.7);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+
+.maintenance-tab:hover {
+  color: var(--brown);
+  background: rgba(248, 245, 237, 0.3);
+}
+
+.maintenance-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+.maintenance-content {
+  min-height: 150px;
+  max-height: 300px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Scheduled Maintenance Tab */
+.scheduled-maintenance-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.scheduled-maintenance-list,
+.maintenance-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scheduled-maintenance-item,
+.maintenance-history-item {
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(248, 245, 237, 0.5) 0%, rgba(248, 245, 237, 0.2) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(238, 231, 216, 0.5);
+  transition: all 0.2s ease;
+}
+
+.scheduled-maintenance-item:hover,
+.maintenance-history-item:hover {
+  background: linear-gradient(135deg, rgba(248, 245, 237, 0.7) 0%, rgba(248, 245, 237, 0.4) 100%);
+  transform: translateX(3px);
+}
+
+.maintenance-item-header,
+.maintenance-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.maintenance-item-header > div,
+.maintenance-history-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.maintenance-item-header strong,
+.maintenance-history-header strong {
+  color: var(--brown);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.maintenance-status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.maintenance-status-badge.agendada {
+  background: rgba(74, 144, 226, 0.15);
+  color: #4a90e2;
+}
+
+.maintenance-status-badge.em-andamento {
+  background: rgba(233, 181, 67, 0.15);
+  color: #e9b543;
+}
+
+.maintenance-date {
+  color: rgba(74, 63, 53, 0.7);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.maintenance-history-header time {
+  color: rgba(74, 63, 53, 0.65);
+  font-size: 0.85rem;
+}
+
+.scheduled-maintenance-item p,
+.maintenance-history-item p {
+  margin: 8px 0 0;
+  color: rgba(74, 63, 53, 0.75);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: rgba(74, 63, 53, 0.5);
+}
+
+.empty-state svg {
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .machine-details-actions {
@@ -956,11 +1210,6 @@
 
   .machines-table td:first-child {
     max-width: 240px;
-  }
-
-  .maintenance-log li {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .machine-modal__card,

@@ -11,6 +11,7 @@ import ActivitiesControl from './pages/features/ActivitiesControl/index'
 import Meteorologia from './pages/features/Meteorologia/index'
 import SafraControl from './pages/features/SafraControl/index'
 import UsersControl from './pages/features/UsersControl/index'
+import SoloPage from './pages/Solo/SoloPage'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/financeiro" element={<FinanceControl />} />
         <Route path="/atividades" element={<ActivitiesControl />} />
         <Route path="/meteorologia" element={<Meteorologia />} />
+        <Route path="/solo" element={<SoloPage />} />
         <Route path="/safra" element={<SafraControl />} />
         <Route path="/usuarios" element={<UsersControl />} />
       </Route>

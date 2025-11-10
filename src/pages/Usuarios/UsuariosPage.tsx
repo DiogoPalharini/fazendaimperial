@@ -87,7 +87,7 @@ export default function UsuariosPage() {
         <p>Controle de acesso e permissões do sistema</p>
       </div>
 
-      <div className="toolbar">
+      <div className="usuarios-toolbar">
         <div className="search-group">
           <Search size={18} />
           <input
@@ -97,9 +97,11 @@ export default function UsuariosPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <button className="add-button" onClick={abrirNovo}>
-          <Plus size={18} /> Novo Usuário
-        </button>
+        <div className="toolbar-actions">
+          <button type="button" className="add-button" onClick={abrirNovo}>
+            <Plus size={18} /> Novo Usuário
+          </button>
+        </div>
       </div>
 
       <div className="users-grid">

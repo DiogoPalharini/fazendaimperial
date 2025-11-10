@@ -22,6 +22,15 @@ export type MaintenanceLog = {
   observacao: string
 }
 
+export type ScheduledMaintenance = {
+  id: string
+  machineId: string
+  tipo: 'Revisão' | 'Troca de óleo' | 'Substituição de peças' | 'Inspeção'
+  dataAgendada: string
+  observacao?: string
+  status: 'Agendada' | 'Em andamento' | 'Concluída' | 'Cancelada'
+}
+
 export type MachineForm = {
   id?: string
   nome: string
