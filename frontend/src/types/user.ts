@@ -6,6 +6,7 @@ export type UserRole =
   | 'engenheiro-agronomo'
   | 'financeiro'
   | 'motorista-logistica'
+  | 'system_admin'
 
 export interface User {
   id: string
@@ -36,5 +37,6 @@ export interface UserPermissions {
   canViewSoilAnalysis: boolean
   canManageFinancial: boolean
   canViewLogistics: boolean
+  canManageFarms: boolean
 }
 

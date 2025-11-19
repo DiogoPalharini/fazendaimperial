@@ -12,6 +12,7 @@ import Meteorologia from './pages/features/Meteorologia/index'
 import SafraControl from './pages/features/SafraControl/index'
 import UsersControl from './pages/features/UsersControl/index'
 import SoloPage from './pages/Solo/SoloPage'
+import SystemAdminPage from './pages/SystemAdmin/SystemAdminPage'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/solo" element={<SoloPage />} />
         <Route path="/safra" element={<SafraControl />} />
         <Route path="/usuarios" element={<UsersControl />} />
+        <Route path="/admin/sistema" element={<SystemAdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

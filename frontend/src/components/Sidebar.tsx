@@ -19,6 +19,7 @@ import {
   Sprout,
   Users,
   FlaskConical,
+  ShieldCheck,
   X,
   Sun,
   Moon,
@@ -30,6 +31,7 @@ type SidebarProps = {
 }
 
 const menuItems = [
+  { key: 'system-admin', path: '/admin/sistema', translationKey: 'sidebar.systemAdmin', Icon: ShieldCheck },
   { key: 'dashboard', path: '/dashboard', translationKey: 'sidebar.dashboard', Icon: LayoutDashboard },
   { key: 'truck-loading', path: '/carregamento', translationKey: 'sidebar.truckLoading', Icon: Truck },
   { key: 'invoice', path: '/nota-fiscal', translationKey: 'sidebar.invoice', Icon: FileText },

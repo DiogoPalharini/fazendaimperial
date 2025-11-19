@@ -3,6 +3,14 @@ import { User, UserRole, MenuItem, UserPermissions } from '../types/user'
 // Usuários de teste
 export const TEST_USERS: User[] = [
   {
+    id: 'admin',
+    nome: 'System Admin',
+    email: 'admin@fazendaimperial.com',
+    role: 'system_admin',
+    avatar: '🛡️',
+    ativo: true
+  },
+  {
     id: '1',
     nome: 'Carlos Silva',
     email: 'carlos@fazendaimperial.com',
@@ -63,86 +71,107 @@ export const TEST_USERS: User[] = [
 // Configuração de menus por tipo de usuário
 export const MENU_ITEMS: MenuItem[] = [
   {
+    id: 'system-admin',
+    label: 'Administração do Sistema',
+    path: '/admin/sistema',
+    icon: 'ShieldCheck',
+    roles: ['system_admin']
+  },
+  {
     id: 'dashboard',
     label: 'Visão Geral',
     path: '/dashboard',
     icon: 'LayoutDashboard',
-    roles: ['gestor-geral', 'gerente-producao', 'gestor-estoque', 'engenheiro-agronomo', 'financeiro']
+    roles: ['gestor-geral', 'gerente-producao', 'gestor-estoque', 'engenheiro-agronomo', 'financeiro', 'system_admin']
   },
   {
     id: 'itens',
     label: 'Gestão de Itens',
     path: '/itens',
     icon: 'Boxes',
-    roles: ['gestor-geral', 'gestor-estoque']
+    roles: ['gestor-geral', 'gestor-estoque', 'system_admin']
   },
   {
     id: 'categorias',
     label: 'Categorias',
     path: '/categorias',
     icon: 'Tags',
-    roles: ['gestor-geral', 'gestor-estoque']
+    roles: ['gestor-geral', 'gestor-estoque', 'system_admin']
   },
   {
     id: 'producao',
     label: 'Produção',
     path: '/producao',
     icon: 'Sprout',
-    roles: ['gestor-geral', 'gerente-producao', 'operador-maquina', 'engenheiro-agronomo']
+    roles: ['gestor-geral', 'gerente-producao', 'operador-maquina', 'engenheiro-agronomo', 'system_admin']
   },
   {
     id: 'estoque',
     label: 'Controle de Estoque',
     path: '/estoque',
     icon: 'Warehouse',
-    roles: ['gestor-geral', 'gestor-estoque']
+    roles: ['gestor-geral', 'gestor-estoque', 'system_admin']
   },
   {
     id: 'maquinas',
     label: 'Máquinas e Equipamentos',
     path: '/maquinas',
     icon: 'Tractor',
-    roles: ['gestor-geral', 'operador-maquina']
+    roles: ['gestor-geral', 'operador-maquina', 'system_admin']
   },
   {
     id: 'solo',
     label: 'Análise de Solo',
     path: '/solo',
     icon: 'Droplets',
-    roles: ['gestor-geral', 'engenheiro-agronomo']
+    roles: ['gestor-geral', 'engenheiro-agronomo', 'system_admin']
   },
   {
     id: 'financeiro',
     label: 'Financeiro',
     path: '/financeiro',
     icon: 'DollarSign',
-    roles: ['gestor-geral', 'financeiro']
+    roles: ['gestor-geral', 'financeiro', 'system_admin']
   },
   {
     id: 'logistica',
     label: 'Logística',
     path: '/logistica',
     icon: 'Truck',
-    roles: ['gestor-geral', 'motorista-logistica']
+    roles: ['gestor-geral', 'motorista-logistica', 'system_admin']
   },
   {
     id: 'relatorios',
     label: 'Relatórios',
     path: '/relatorios',
     icon: 'BarChart3',
-    roles: ['gestor-geral', 'gerente-producao', 'gestor-estoque', 'engenheiro-agronomo', 'financeiro']
+    roles: ['gestor-geral', 'gerente-producao', 'gestor-estoque', 'engenheiro-agronomo', 'financeiro', 'system_admin']
   },
   {
     id: 'usuarios',
     label: 'Usuários',
     path: '/usuarios',
     icon: 'Users',
-    roles: ['gestor-geral']
+    roles: ['gestor-geral', 'system_admin']
   }
 ]
 
 // Permissões por tipo de usuário
 export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
+  'system_admin': {
+    canViewDashboard: true,
+    canManageItems: true,
+    canManageCategories: true,
+    canViewReports: true,
+    canManageUsers: true,
+    canViewProduction: true,
+    canManageInventory: true,
+    canViewMachinery: true,
+    canViewSoilAnalysis: true,
+    canManageFinancial: true,
+    canViewLogistics: true,
+    canManageFarms: true,
+  },
   'gestor-geral': {
     canViewDashboard: true,
     canManageItems: true,
@@ -154,7 +183,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: true,
     canViewSoilAnalysis: true,
     canManageFinancial: true,
-    canViewLogistics: true
+    canViewLogistics: true,
+    canManageFarms: false,
   },
   'gerente-producao': {
     canViewDashboard: true,
@@ -167,7 +197,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: false,
     canViewSoilAnalysis: false,
     canManageFinancial: false,
-    canViewLogistics: false
+    canViewLogistics: false,
+    canManageFarms: false,
   },
   'gestor-estoque': {
     canViewDashboard: true,
@@ -180,7 +211,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: false,
     canViewSoilAnalysis: false,
     canManageFinancial: false,
-    canViewLogistics: false
+    canViewLogistics: false,
+    canManageFarms: false,
   },
   'operador-maquina': {
     canViewDashboard: false,
@@ -193,7 +225,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: true,
     canViewSoilAnalysis: false,
     canManageFinancial: false,
-    canViewLogistics: false
+    canViewLogistics: false,
+    canManageFarms: false,
   },
   'engenheiro-agronomo': {
     canViewDashboard: true,
@@ -206,7 +239,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: false,
     canViewSoilAnalysis: true,
     canManageFinancial: false,
-    canViewLogistics: false
+    canViewLogistics: false,
+    canManageFarms: false,
   },
   'financeiro': {
     canViewDashboard: true,
@@ -219,7 +253,8 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: false,
     canViewSoilAnalysis: false,
     canManageFinancial: true,
-    canViewLogistics: false
+    canViewLogistics: false,
+    canManageFarms: false,
   },
   'motorista-logistica': {
     canViewDashboard: false,
@@ -232,8 +267,9 @@ export const USER_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canViewMachinery: false,
     canViewSoilAnalysis: false,
     canManageFinancial: false,
-    canViewLogistics: true
-  }
+    canViewLogistics: true,
+    canManageFarms: false,
+  },
 }
 
 // Função para obter permissões do usuário
