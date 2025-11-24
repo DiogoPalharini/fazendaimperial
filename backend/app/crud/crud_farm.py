@@ -11,7 +11,8 @@ from app.core.modules import MODULE_KEYS
 from app.core.security import get_password_hash
 from app.models.farm import Farm, FarmStatus
 from app.models.farm_module import FarmModule
-from app.models.user import User, UserRole
+from app.models.user import User
+from app.models.permissions_enum import BaseRole
 from app.schemas.farm import FarmCreate
 
 
@@ -55,7 +56,7 @@ class CRUDFarm:
             name=obj_in.owner.name,
             email=obj_in.owner.email.lower(),
             hashed_password=get_password_hash(obj_in.owner.password),
-            role=UserRole.FARM_OWNER,
+            base_role=BaseRole.OWNER,
             farm_id=db_farm.id,
             phone=obj_in.owner.phone,
         )

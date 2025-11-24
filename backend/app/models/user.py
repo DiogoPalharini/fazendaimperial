@@ -1,46 +1,51 @@
+"""Modelo User - Usuários"""
 from __future__ import annotations
 
-import enum
-import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
+from app.models.permissions_enum import BaseRole
 
-
-class UserRole(str, enum.Enum):
-    SYSTEM_ADMIN = 'system_admin'
-    FARM_OWNER = 'farm_owner'
-    MANAGER = 'manager'
-    EMPLOYEE = 'employee'
+if TYPE_CHECKING:
+    from app.models.group import Group
+    from app.models.user_farm_permissions import UserFarmPermissions
 
 
 class User(Base):
+    """Usuário pertencente a um grupo"""
     __tablename__ = 'users'
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(Integer, ForeignKey('groups.id'), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    cpf: Mapped[str] = mapped_column(String(14), nullable=False)
     email: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name='user_roles'), nullable=False, default=UserRole.EMPLOYEE)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    farm_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey('farms.id', ondelete='SET NULL'), nullable=True
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    base_role: Mapped[BaseRole] = mapped_column(
+        Enum(BaseRole, name='base_role'),
+        nullable=False
     )
-
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    farm = relationship('Farm', back_populates='users', foreign_keys=[farm_id])
-    owned_farm = relationship(
-        'Farm',
-        back_populates='owner',
-        foreign_keys='Farm.owner_id',
-        uselist=False,
+    # Relacionamentos
+    group: Mapped['Group'] = relationship(
+        'Group',
+        back_populates='users',
+        foreign_keys=[group_id]
     )
-
+    owned_group: Mapped['Group | None'] = relationship(
+        'Group',
+        back_populates='owner',
+        foreign_keys='Group.owner_id',
+        uselist=False
+    )
+    farms_permissions: Mapped[list['UserFarmPermissions']] = relationship(
+        'UserFarmPermissions',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )

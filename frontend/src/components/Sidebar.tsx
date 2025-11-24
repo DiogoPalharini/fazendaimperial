@@ -1,7 +1,8 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useMemo } from 'react'
 import { useTranslation } from '../contexts/LanguageContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useAuth } from '../contexts/AuthContext'
 import './Sidebar.css'
 import logo from '../assets/icon.png'
 import {
@@ -23,6 +24,7 @@ import {
   X,
   Sun,
   Moon,
+  LogOut,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -45,14 +47,62 @@ const menuItems = [
   { key: 'users', path: '/usuarios', translationKey: 'sidebar.users', Icon: Users },
 ]
 
+// Mapear keys dos menu items para keys de módulos
+const moduleKeyMap: Record<string, string> = {
+  'dashboard': 'dashboard',
+  'truck-loading': 'carregamento',
+  'invoice': 'nota-fiscal',
+  'machines': 'maquinas',
+  'inputs': 'insumos',
+  'finance': 'financeiro',
+  'activities': 'atividades',
+  'meteorologia': 'meteorologia',
+  'solo': 'solo',
+  'safra': 'safra',
+  'users': 'usuarios',
+}
+
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const t = useTranslation()
   const { theme, setTheme } = useTheme()
+  const { user, logout, allowedModules } = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const isActive = (path: string) => location.pathname === path
 
   const ToggleIcon = isOpen ? ChevronLeft : ChevronRight
+
+  // Filtrar menu items baseado no role do usuário e módulos permitidos
+  const filteredMenuItems = useMemo(() => {
+    if (!user) return []
+    
+    // Se for system_admin, mostrar apenas Administração do Sistema
+    if (user.base_role === 'system_admin') {
+      return menuItems.filter(item => item.key === 'system-admin')
+    }
+    
+    // Para owner e outros roles, filtrar pelos módulos permitidos
+    // Dashboard sempre deve aparecer
+    if (allowedModules.length > 0) {
+      return menuItems.filter(item => {
+        if (item.key === 'system-admin') return false
+        // Dashboard sempre visível
+        if (item.key === 'dashboard') return true
+        const moduleKey = moduleKeyMap[item.key]
+        // Se o módulo estiver mapeado, verificar se está na lista de permitidos
+        return moduleKey ? allowedModules.includes(moduleKey) : false
+      })
+    }
+    
+    // Se não tem módulos permitidos, mostrar apenas dashboard
+    return menuItems.filter(item => item.key === 'dashboard')
+  }, [user, allowedModules])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <>
@@ -74,7 +124,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         <nav id="sidebar-nav" className="sidebar-nav" aria-label="Navegação principal">
           <ul className="nav-list">
-            {menuItems.map(({ key, path, translationKey, Icon }) => (
+            {filteredMenuItems.map(({ key, path, translationKey, Icon }) => (
               <li className="nav-item" key={key}>
                 <Link
                   to={path}
@@ -99,6 +149,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           >
             <Settings size={22} />
             {isOpen && <span className="settings-label">Configurações</span>}
+          </button>
+          <button
+            className={`logout-btn ${isOpen ? 'open' : ''}`}
+            title="Sair"
+            aria-label="Sair"
+            type="button"
+            onClick={handleLogout}
+          >
+            <LogOut size={22} />
+            {isOpen && <span className="logout-label">Sair</span>}
           </button>
         </div>
       </aside>

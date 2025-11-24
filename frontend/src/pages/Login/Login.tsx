@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import './Login.css'
 import logo from '../../assets/icon.png'
 
@@ -16,6 +17,7 @@ export default function Login() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   function handleUsernameChange(event: ChangeEvent<HTMLInputElement>) {
     setUsername(event.target.value)
@@ -44,10 +46,19 @@ export default function Login() {
     }
     try {
       setIsSubmitting(true)
-      // Simulação de login (sem backend)
-      await new Promise((resolve) => setTimeout(resolve, 600))
-      // Como não há backend, se houver valores preenchidos simulamos sucesso
-      navigate('/dashboard', { replace: true })
+      const user = await login(username, password)
+      if (user) {
+        // Redirecionar baseado no role do usuário
+        if (user.base_role === 'system_admin') {
+          navigate('/admin/sistema', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
+      } else {
+        setErrors({ global: 'Email ou senha incorretos.' })
+      }
+    } catch (error) {
+      setErrors({ global: 'Erro ao fazer login. Tente novamente.' })
     } finally {
       setIsSubmitting(false)
     }

@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, Navigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import LanguageSelector from '../components/LanguageSelector'
 import { useTranslation } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
+import ProtectedRoute from '../components/ProtectedRoute'
 import './AppLayout.css'
 import { ChevronLeft, Menu } from 'lucide-react'
 
 export default function AppLayout() {
   const t = useTranslation()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const MOBILE_BREAKPOINT = 720
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -32,6 +35,15 @@ export default function AppLayout() {
   }, [])
 
   const MobileToggleIcon = sidebarOpen ? ChevronLeft : Menu
+
+  // Proteção de rotas - redirecionar para login se não autenticado
+  if (isLoading) {
+    return <div>Carregando...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
 
   return (
     <div
@@ -63,12 +75,14 @@ export default function AppLayout() {
             <LanguageSelector />
             <button className="icon-button" type="button" aria-label={t('layout.notifications')}>🔔</button>
             <div className="user-chip">
-              <span className="user-name">{t('layout.hello')}, Diogo</span>
+              <span className="user-name">{t('layout.hello')}, {user?.name || 'Usuário'}</span>
             </div>
           </div>
         </header>
 
-        <Outlet />
+        <ProtectedRoute>
+          <Outlet />
+        </ProtectedRoute>
       </main>
     </div>
   )

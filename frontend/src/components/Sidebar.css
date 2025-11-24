@@ -168,8 +168,8 @@
 .sidebar-footer {
   margin-top: auto;
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -209,12 +209,50 @@
   white-space: nowrap;
 }
 
-.sidebar.closed .settings-btn {
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--background);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 160ms ease;
+  width: 100%;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+  background: #fff;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
+.logout-btn:active {
+  transform: scale(0.97);
+}
+
+.logout-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.logout-label {
+  white-space: nowrap;
+}
+
+.sidebar.closed .settings-btn,
+.sidebar.closed .logout-btn {
   width: auto;
   padding: 10px;
 }
 
-.sidebar.closed .settings-label {
+.sidebar.closed .settings-label,
+.sidebar.closed .logout-label {
   display: none;
 }
 

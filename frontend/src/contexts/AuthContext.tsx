@@ -1,14 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { User, UserRole } from '../types/user'
-import { getUserByEmail, getUserById, getUserPermissions } from '../data/users'
+import { User } from '../types/user'
+import { authService, UserResponse } from '../services/auth'
+import { getUserPermissions } from '../data/users'
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<User | null>
   logout: () => void
   hasPermission: (permission: keyof ReturnType<typeof getUserPermissions>) => boolean
   isLoading: boolean
+  allowedModules: string[]
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -17,55 +19,119 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+// Converter UserResponse do backend para User do frontend
+function mapUserResponseToUser(userResponse: UserResponse): User {
+  return {
+    id: userResponse.id,
+    group_id: userResponse.group_id,
+    name: userResponse.name,
+    email: userResponse.email,
+    base_role: userResponse.base_role,
+    active: userResponse.active,
+    cpf: userResponse.cpf,
+    created_at: userResponse.created_at,
+    // Mapear base_role para role antigo para compatibilidade
+    role: mapBaseRoleToOldRole(userResponse.base_role),
+    ativo: userResponse.active,
+  }
+}
+
+// Mapear base_role para role antigo (temporário para compatibilidade)
+function mapBaseRoleToOldRole(baseRole: string): 'system_admin' | 'gestor-geral' | 'financeiro' {
+  const mapping: Record<string, 'system_admin' | 'gestor-geral' | 'financeiro'> = {
+    system_admin: 'system_admin',
+    owner: 'gestor-geral',
+    manager: 'gestor-geral',
+    financial: 'financeiro',
+    operational: 'gestor-geral',
+  }
+  return mapping[baseRole] || 'gestor-geral'
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [allowedModules, setAllowedModules] = useState<string[]>([])
 
-  // Verificar se há usuário salvo no localStorage ao carregar
+  // Buscar módulos permitidos quando o usuário mudar
   useEffect(() => {
-    const savedUserId = localStorage.getItem('fazenda-imperial-user-id')
-    if (savedUserId) {
-      const savedUser = getUserById(savedUserId)
-      if (savedUser) {
-        setUser(savedUser)
-      }
+    if (user && user.base_role !== 'system_admin') {
+      authService.getAllowedModules()
+        .then(setAllowedModules)
+        .catch(() => setAllowedModules([]))
+    } else {
+      setAllowedModules([])
     }
-    setIsLoading(false)
+  }, [user])
+
+  // Verificar se há token salvo e buscar dados do usuário
+  useEffect(() => {
+    const token = localStorage.getItem('integrarural-token')
+    const savedUser = localStorage.getItem('integrarural-user')
+    
+    if (token && savedUser) {
+      try {
+        const userData = JSON.parse(savedUser)
+        setUser(userData)
+        // Validar token buscando dados atualizados do backend
+        authService.getCurrentUser()
+          .then((userResponse) => {
+            const mappedUser = mapUserResponseToUser(userResponse)
+            setUser(mappedUser)
+            localStorage.setItem('integrarural-user', JSON.stringify(mappedUser))
+          })
+          .catch(() => {
+            // Token inválido, limpar
+            localStorage.removeItem('integrarural-token')
+            localStorage.removeItem('integrarural-user')
+            setUser(null)
+          })
+          .finally(() => setIsLoading(false))
+      } catch {
+        localStorage.removeItem('integrarural-token')
+        localStorage.removeItem('integrarural-user')
+        setIsLoading(false)
+      }
+    } else {
+      setIsLoading(false)
+    }
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     setIsLoading(true)
     
     try {
-      // Simulação de delay de login
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const response = await authService.login({ username: email, password })
       
-      // Para demonstração, qualquer senha funciona
-      const foundUser = getUserByEmail(email)
+      // Salvar token
+      localStorage.setItem('integrarural-token', response.access_token)
       
-      if (foundUser && foundUser.ativo) {
-        setUser(foundUser)
-        localStorage.setItem('fazenda-imperial-user-id', foundUser.id)
-        setIsLoading(false)
-        return true
-      }
+      // Buscar dados do usuário
+      const userResponse = await authService.getCurrentUser()
+      const mappedUser = mapUserResponseToUser(userResponse)
       
+      setUser(mappedUser)
+      localStorage.setItem('integrarural-user', JSON.stringify(mappedUser))
       setIsLoading(false)
-      return false
-    } catch (error) {
+      return mappedUser
+    } catch (error: any) {
       setIsLoading(false)
-      return false
+      console.error('Login error:', error)
+      return null
     }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('fazenda-imperial-user-id')
+    localStorage.removeItem('integrarural-token')
+    localStorage.removeItem('integrarural-user')
   }
 
   const hasPermission = (permission: keyof ReturnType<typeof getUserPermissions>): boolean => {
     if (!user) return false
-    const permissions = getUserPermissions(user.role)
+    // Usar role antigo para compatibilidade com sistema de permissões existente
+    const role = user.role || mapBaseRoleToOldRole(user.base_role || 'operational')
+    const permissions = getUserPermissions(role)
     return permissions[permission]
   }
 
@@ -75,7 +141,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     hasPermission,
-    isLoading
+    isLoading,
+    allowedModules
   }
 
   return (

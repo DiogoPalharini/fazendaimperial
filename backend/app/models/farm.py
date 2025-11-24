@@ -1,46 +1,38 @@
+"""Modelo Farm - Fazendas"""
 from __future__ import annotations
 
-import enum
-import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
 
-
-class FarmStatus(str, enum.Enum):
-    ACTIVE = 'active'
-    INACTIVE = 'inactive'
+if TYPE_CHECKING:
+    from app.models.group import Group
+    from app.models.user_farm_permissions import UserFarmPermissions
 
 
 class Farm(Base):
+    """Fazenda pertencente a um grupo"""
     __tablename__ = 'farms'
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(Integer, ForeignKey('groups.id'), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
-    city_state: Mapped[str] = mapped_column(String(160), nullable=False)
-    hectares: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[FarmStatus] = mapped_column(Enum(FarmStatus, name='farm_status'), default=FarmStatus.ACTIVE)
-    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'))
-
+    certificate_a1: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    modules: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    owner = relationship('User', back_populates='owned_farm', foreign_keys=[owner_id])
-    users = relationship('User', back_populates='farm', foreign_keys='User.farm_id')
-    feature_modules = relationship('FarmModule', back_populates='farm', cascade='all, delete-orphan')
-
-    @property
-    def module_keys(self) -> list[str]:
-        return [module.module_key for module in self.feature_modules]
-
-    @property
-    def total_users_count(self) -> int:
-        return len(self.users)
-
-
-
+    # Relacionamentos
+    group: Mapped['Group'] = relationship(
+        'Group',
+        back_populates='farms',
+        foreign_keys=[group_id]
+    )
+    user_permissions: Mapped[list['UserFarmPermissions']] = relationship(
+        'UserFarmPermissions',
+        back_populates='farm',
+        cascade='all, delete-orphan'
+    )

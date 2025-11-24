@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Login from './pages/Login/Login'
 import Dashboard from './pages/Dashboard'
 import AppLayout from './layouts/AppLayout'
@@ -13,11 +14,13 @@ import SafraControl from './pages/features/SafraControl/index'
 import UsersControl from './pages/features/UsersControl/index'
 import SoloPage from './pages/Solo/SoloPage'
 import SystemAdminPage from './pages/SystemAdmin/SystemAdminPage'
+import HomeRedirect from './components/HomeRedirect'
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+    <AuthProvider>
+      <Routes>
+      <Route path="/" element={<HomeRedirect />} />
       <Route path="/login" element={<Login />} />
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -33,7 +36,8 @@ export default function App() {
         <Route path="/usuarios" element={<UsersControl />} />
         <Route path="/admin/sistema" element={<SystemAdminPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
+    </AuthProvider>
   )
 }

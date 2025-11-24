@@ -1,3 +1,11 @@
+export type BaseRole = 
+  | 'owner'
+  | 'manager'
+  | 'financial'
+  | 'operational'
+  | 'system_admin'
+
+// Tipo antigo mantido para compatibilidade (será removido gradualmente)
 export type UserRole = 
   | 'gestor-geral'
   | 'gerente-producao'
@@ -8,16 +16,22 @@ export type UserRole =
   | 'motorista-logistica'
   | 'system_admin'
 
-export interface User {
-  id: string
-  nome: string
+export type User = {
+  id: string | number
+  group_id?: number
+  nome?: string
+  name?: string
   email: string
-  role: UserRole
+  role?: UserRole
+  base_role?: BaseRole
   avatar?: string
-  ativo: boolean
+  ativo?: boolean
+  active?: boolean
+  cpf?: string
+  created_at?: string
 }
 
-export interface MenuItem {
+export type MenuItem = {
   id: string
   label: string
   path: string
@@ -25,7 +39,7 @@ export interface MenuItem {
   roles: UserRole[]
 }
 
-export interface UserPermissions {
+export type UserPermissions = {
   canViewDashboard: boolean
   canManageItems: boolean
   canManageCategories: boolean
@@ -39,4 +53,3 @@ export interface UserPermissions {
   canViewLogistics: boolean
   canManageFarms: boolean
 }
-

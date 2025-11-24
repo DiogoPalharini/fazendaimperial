@@ -15,30 +15,37 @@ app = FastAPI(
     openapi_url=f'{settings.API_V1_STR}/openapi.json',
 )
 
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=['*'],
-        allow_headers=['*'],
-    )
+# CORS configuration
+cors_origins = settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else ["http://localhost:5173", "http://localhost:3000"]
+print(f"🔧 CORS Origins configurados: {cors_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
 
 @app.on_event('startup')
 def ensure_admin_user() -> None:
-    if not settings.FIRST_SYSTEM_ADMIN_EMAIL or not settings.FIRST_SYSTEM_ADMIN_PASSWORD:
-        return
-
-    db: Session = SessionLocal()
-    try:
-        user_crud.ensure_system_admin(
-            db,
-            email=settings.FIRST_SYSTEM_ADMIN_EMAIL,
-            password=settings.FIRST_SYSTEM_ADMIN_PASSWORD,
-        )
-    finally:
-        db.close()
+    # TODO: Implementar criação de system admin com grupo
+    # Por enquanto desabilitado pois requer group_id
+    # if not settings.FIRST_SYSTEM_ADMIN_EMAIL or not settings.FIRST_SYSTEM_ADMIN_PASSWORD:
+    #     return
+    #
+    # db: Session = SessionLocal()
+    # try:
+    #     user_crud.ensure_system_admin(
+    #         db,
+    #         email=settings.FIRST_SYSTEM_ADMIN_EMAIL,
+    #         password=settings.FIRST_SYSTEM_ADMIN_PASSWORD,
+    #         group_id=1,  # Precisa criar grupo primeiro
+    #     )
+    # finally:
+    #     db.close()
+    pass
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
