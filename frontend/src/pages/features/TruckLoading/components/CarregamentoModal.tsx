@@ -108,8 +108,8 @@ export default function CarregamentoModal({ onClose, onSave }: CarregamentoModal
                   Selecione uma opção
                 </option>
                 {AVAILABLE_TRUCKS.map((truck) => (
-                  <option key={truck} value={truck}>
-                    {truck}
+                  <option key={truck.value} value={truck.value}>
+                    {truck.label}
                   </option>
                 ))}
               </select>

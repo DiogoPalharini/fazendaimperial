@@ -4,8 +4,10 @@ import CarregamentoModal from './components/CarregamentoModal'
 import CarregamentoDetailsModal from './components/CarregamentoDetailsModal'
 import { formatDateTime } from './utils'
 import type { Carregamento, CarregamentoForm } from './types'
+import { carregamentosService } from '../../../services/carregamentos'
 import {
   AVAILABLE_TRUCKS,
+  getTruckLabel,
   AVAILABLE_FARMS,
   AVAILABLE_DESTINATIONS,
   MOCK_CARREGAMENTOS,
@@ -38,13 +40,39 @@ export default function TruckLoading() {
     })
   }, [carregamentos, searchQuery, filterTruck, filterFarm, filterDestination])
 
-  const handleSave = (carregamento: CarregamentoForm) => {
-    const novoCarregamento: Carregamento = {
-      ...carregamento,
-      id: String(Date.now()),
+  const handleSave = async (carregamento: CarregamentoForm) => {
+    try {
+      // Converter datetime-local para ISO format com timezone
+      const scheduledAtISO = carregamento.scheduledAt
+        ? new Date(carregamento.scheduledAt).toISOString()
+        : new Date().toISOString()
+      
+      // Preparar dados para envio (garantir formato correto)
+      const carregamentoParaEnvio = {
+        ...carregamento,
+        scheduledAt: scheduledAtISO,
+      }
+      
+      // Chamar API para gerar NFe
+      const response = await carregamentosService.gerarNFe(carregamentoParaEnvio)
+      
+      // Criar objeto Carregamento com os dados retornados
+      const novoCarregamento: Carregamento = {
+        ...carregamentoParaEnvio,
+        id: String(response.id),
+        nfe_ref: response.nfe_ref,
+        nfe_status: response.nfe_status,
+        nfe_xml_url: response.nfe_xml_url,
+        nfe_danfe_url: response.nfe_danfe_url,
+      }
+      
+      setCarregamentos((prev) => [novoCarregamento, ...prev])
+      setModalOpen(false)
+    } catch (error) {
+      console.error('Erro ao gerar NFe:', error)
+      // Aqui você pode adicionar uma notificação de erro para o usuário
+      alert('Erro ao gerar NFe. Por favor, tente novamente.')
     }
-    setCarregamentos((prev) => [novoCarregamento, ...prev])
-    setModalOpen(false)
   }
 
   return (
@@ -80,8 +108,8 @@ export default function TruckLoading() {
             >
               <option value="">Todos</option>
               {AVAILABLE_TRUCKS.map((truck) => (
-                <option key={truck} value={truck}>
-                  {truck}
+                <option key={truck.value} value={truck.value}>
+                  {truck.label}
                 </option>
               ))}
             </select>
@@ -161,7 +189,7 @@ export default function TruckLoading() {
                   tabIndex={0}
                 >
                   <td>{formatDateTime(carregamento.scheduledAt)}</td>
-                  <td>{carregamento.truck}</td>
+                  <td>{getTruckLabel(carregamento.truck)}</td>
                   <td>{carregamento.driver}</td>
                   <td>{carregamento.farm}</td>
                   <td>{carregamento.field}</td>

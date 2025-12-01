@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import type { Carregamento } from '../types'
 import { formatDateTime } from '../utils'
+import { getTruckLabel } from '../constants'
 import '../TruckLoading.css'
 
 type CarregamentoDetailsModalProps = {
@@ -38,7 +39,7 @@ export default function CarregamentoDetailsModal({
 
           <div className="detail-item">
             <span className="detail-label">Caminhão</span>
-            <strong className="detail-value">{carregamento.truck}</strong>
+            <strong className="detail-value">{getTruckLabel(carregamento.truck)}</strong>
           </div>
 
           <div className="detail-item">

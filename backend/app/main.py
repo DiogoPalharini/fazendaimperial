@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.routes import api_router
@@ -47,6 +49,25 @@ def ensure_admin_user() -> None:
     #     db.close()
     pass
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handler para mostrar erros de validação de forma mais clara"""
+    errors = []
+    for error in exc.errors():
+        field = '.'.join(str(loc) for loc in error['loc'] if loc != 'body')
+        errors.append({
+            'field': field,
+            'message': error['msg'],
+            'type': error['type']
+        })
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            'detail': 'Erro de validação',
+            'errors': errors
+        }
+    )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

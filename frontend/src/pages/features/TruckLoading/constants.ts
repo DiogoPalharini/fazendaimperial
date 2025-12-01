@@ -1,8 +1,24 @@
-export const AVAILABLE_TRUCKS = [
-  'Caminhão A - Placa ABC1D23',
-  'Caminhão B - Placa DEF4G56',
-  'Caminhão C - Placa HIJ7K89'
+export type TruckOption = {
+  label: string
+  value: string
+}
+
+export const AVAILABLE_TRUCKS: TruckOption[] = [
+  { label: 'Caminhão A - Placa ABC1D23', value: 'ABC1D23' },
+  { label: 'Caminhão B - Placa DEF4G56', value: 'DEF4G56' },
+  { label: 'Caminhão C - Placa HIJ7K89', value: 'HIJ7K89' },
 ]
+
+const TRUCK_LABEL_MAP: Record<string, string> = AVAILABLE_TRUCKS.reduce(
+  (acc, option) => {
+    acc[option.value] = option.label
+    return acc
+  },
+  {} as Record<string, string>
+)
+
+export const getTruckLabel = (truckValue: string): string =>
+  TRUCK_LABEL_MAP[truckValue] ?? truckValue
 
 export const AVAILABLE_DRIVERS = [
   'João Martins',
@@ -53,7 +69,7 @@ export const MOCK_CARREGAMENTOS = [
   {
     id: '1',
     scheduledAt: '2024-01-15T10:00',
-    truck: 'Caminhão A - Placa ABC1D23',
+    truck: 'ABC1D23',
     driver: 'João Martins',
     farm: 'Fazenda Imperial',
     field: 'Talhão 01 - Soja',
@@ -65,7 +81,7 @@ export const MOCK_CARREGAMENTOS = [
   {
     id: '2',
     scheduledAt: '2024-01-16T14:30',
-    truck: 'Caminhão B - Placa DEF4G56',
+    truck: 'DEF4G56',
     driver: 'Carla Ribeiro',
     farm: 'Fazenda Aurora',
     field: 'Talhão 07 - Milho',
@@ -77,7 +93,7 @@ export const MOCK_CARREGAMENTOS = [
   {
     id: '3',
     scheduledAt: '2024-01-17T08:00',
-    truck: 'Caminhão C - Placa HIJ7K89',
+    truck: 'HIJ7K89',
     driver: 'Pedro Duarte',
     farm: 'Fazenda Esperança',
     field: 'Talhão 12 - Trigo',

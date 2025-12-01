@@ -9,6 +9,10 @@ export type Carregamento = {
   quantity: string
   unit: string
   destination: string
+  nfe_ref?: string | null
+  nfe_status?: string | null
+  nfe_xml_url?: string | null
+  nfe_danfe_url?: string | null
 }
 
 export type CarregamentoForm = {
