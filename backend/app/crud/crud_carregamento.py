@@ -23,6 +23,24 @@ class CRUDCarregamento:
             destination=obj_in.destination,
             scheduled_at=obj_in.scheduled_at,
             nfe_status=obj_in.nfe_status,
+            type=obj_in.type,
+
+            # Pesagem e Descontos
+            peso_estimado_kg=obj_in.peso_estimado_kg,
+            peso_bruto_kg=obj_in.peso_bruto_kg,
+            tara_kg=obj_in.tara_kg,
+            peso_liquido_kg=obj_in.peso_liquido_kg,
+            umidade_percent=obj_in.umidade_percent,
+            impurezas_percent=obj_in.impurezas_percent,
+            peso_com_desconto_fazenda=obj_in.peso_com_desconto_fazenda,
+            peso_com_desconto_armazem=obj_in.peso_com_desconto_armazem,
+            peso_recebido_final_kg=obj_in.peso_recebido_final_kg,
+            armazem_destino_id=obj_in.armazem_destino_id,
+
+            # Comparativo Empresa
+            umidade_empresa_percent=obj_in.umidade_empresa_percent,
+            impurezas_empresa_percent=obj_in.impurezas_empresa_percent,
+            peso_com_desconto_empresa=obj_in.peso_com_desconto_empresa,
         )
         db.add(db_obj)
         if commit:
@@ -71,9 +89,14 @@ class CRUDCarregamento:
             db.flush()
         return db_obj
 
-    def get_multi(self, db: Session) -> Sequence[Carregamento]:
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> Sequence[Carregamento]:
         """Lista todos os carregamentos"""
-        return db.execute(select(Carregamento).order_by(Carregamento.created_at.desc())).scalars().all()
+        return db.execute(
+            select(Carregamento)
+            .order_by(Carregamento.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        ).scalars().all()
 
 
 carregamento = CRUDCarregamento()

@@ -67,7 +67,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card" role="region" aria-labelledby="login-title">
-        <img src={logo} alt="Fazenda Imperial" className="login-logo" />
+        <img src={logo} alt="Integra Rural" className="login-logo" />
         <h1 id="login-title" className="login-title">Login</h1>
 
         {errors.global && (

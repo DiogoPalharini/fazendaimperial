@@ -24,6 +24,25 @@ class Farm(Base):
     certificate_a1: Mapped[str | None] = mapped_column(String(255), nullable=True)
     modules: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    
+    # Dados Fiscais / Endereço para NFe
+    cnpj: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    inscricao_estadual: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    telefone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    
+    logradouro: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    numero: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    bairro: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    municipio: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    uf: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    cep: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    
+    # CRT: 1=Simples Nacional, 2=Simples Excesso, 3=Normal
+    regime_tributario: Mapped[str] = mapped_column(String(1), nullable=False, default='1')
+    
+    # Defaults para Emissão
+    default_cfop: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    default_natureza_operacao: Mapped[str | None] = mapped_column(String(160), nullable=True)
 
     # Relacionamentos
     group: Mapped['Group'] = relationship(

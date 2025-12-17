@@ -1,4 +1,4 @@
-:root{
+:root {
   --background: #F8F5ED;
   --green: #3A7D44;
   --green-secondary: #6B9E4B;
@@ -73,19 +73,31 @@
   transition: background 160ms ease, transform 160ms ease;
 }
 
-.sidebar-toggle:hover { background: #fff; }
-.sidebar-toggle:active { transform: scale(0.96); }
-.sidebar-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.sidebar-toggle svg { transition: transform 160ms ease; }
+.sidebar-toggle:hover {
+  background: #fff;
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.96);
+}
+
+.sidebar-toggle:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.sidebar-toggle svg {
+  transition: transform 160ms ease;
+}
 
 .sidebar.closed .sidebar-toggle {
   display: none;
 }
 
-.sidebar-nav { 
-  flex: 1; 
-  display: flex; 
-  flex-direction: column; 
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
@@ -117,7 +129,9 @@
   gap: 6px;
 }
 
-.nav-item { width: 100%; }
+.nav-item {
+  width: 100%;
+}
 
 .nav-link {
   display: flex;
@@ -133,8 +147,14 @@
   min-width: 0;
 }
 
-.nav-link:hover { background: #f3efe4; }
-.nav-link:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.nav-link:hover {
+  background: #f3efe4;
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 
 .nav-link.active {
   background: var(--background);
@@ -143,12 +163,12 @@
   box-shadow: 0 8px 20px rgba(58, 125, 68, 0.12);
 }
 
-.nav-icon { 
+.nav-icon {
   flex-shrink: 0;
   margin-top: 2px;
 }
 
-.nav-label { 
+.nav-label {
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
@@ -162,8 +182,14 @@
   padding: 12px 10px;
 }
 
-.sidebar.closed .nav-label { display: none; }
-.sidebar.closed .nav-icon { width: 26px; height: 26px; }
+.sidebar.closed .nav-label {
+  display: none;
+}
+
+.sidebar.closed .nav-icon {
+  width: 26px;
+  height: 26px;
+}
 
 .sidebar-footer {
   margin-top: auto;
@@ -303,10 +329,22 @@
     align-items: flex-start;
   }
 
-  .sidebar.closed .nav-label { display: inline; }
-  .sidebar.closed .nav-link { justify-content: flex-start; }
-  .sidebar.closed .brand-logo { width: 140px; }
-  .sidebar.closed .sidebar-header { flex-direction: row; gap: 16px; }
+  .sidebar.closed .nav-label {
+    display: inline;
+  }
+
+  .sidebar.closed .nav-link {
+    justify-content: flex-start;
+  }
+
+  .sidebar.closed .brand-logo {
+    width: 140px;
+  }
+
+  .sidebar.closed .sidebar-header {
+    flex-direction: row;
+    gap: 16px;
+  }
 
   .sidebar-toggle {
     width: 40px;
@@ -494,6 +532,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -504,10 +543,78 @@
     opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
+/* Submenu Styles */
+.submenu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.submenu-link {
+  padding: 10px 14px 10px 46px;
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  display: block;
+  position: relative;
+}
+
+.submenu-link:hover {
+  color: var(--brown);
+  background: rgba(243, 239, 228, 0.5);
+}
+
+.submenu-link.active {
+  color: var(--green);
+  font-weight: 600;
+  background: rgba(58, 125, 68, 0.08);
+}
+
+.submenu-link.active::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.submenu-arrow {
+  transition: transform 0.2s ease;
+  margin-left: auto;
+  color: #9ca3af;
+}
+
+.submenu-arrow.open {
+  transform: rotate(180deg);
+  color: var(--green);
+}

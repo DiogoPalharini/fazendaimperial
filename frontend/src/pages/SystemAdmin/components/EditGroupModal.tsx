@@ -21,11 +21,26 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
 
   const [form, setForm] = useState({
     groupName: group.name,
+    focusNfeToken: '', // Token Focus NFe
     ownerName: '',
     ownerCpf: '',
     ownerEmail: '',
     ownerPassword: '',
-    farms: [] as Array<{ id?: number; name: string; certificate_a1: string; modules: string[] }>,
+    farms: [] as Array<{
+      id?: number;
+      name: string;
+      modules: string[];
+      // Fiscal
+      inscricao_estadual: string;
+      regime_tributario: string;
+      telefone: string;
+      cep: string;
+      logradouro: string;
+      numero: string;
+      bairro: string;
+      municipio: string;
+      uf: string;
+    }>,
   })
 
   // Carregar dados completos do grupo
@@ -35,10 +50,11 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
         setIsLoading(true)
         const data = await groupsService.getGroup(group.id)
         setGroupData(data)
-        
+
         // Preencher formulário com dados existentes
         setForm({
           groupName: data.name,
+          focusNfeToken: data.focus_nfe_token || '',
           ownerName: data.owner?.name || '',
           ownerCpf: data.owner?.cpf || '',
           ownerEmail: data.owner?.email || '',
@@ -50,8 +66,17 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
             return {
               id: farm.id,
               name: farm.name,
-              certificate_a1: farm.certificate_a1 || '',
               modules: Array.isArray(modules) ? modules : [],
+              // Fiscal
+              inscricao_estadual: farm.inscricao_estadual || '',
+              regime_tributario: farm.regime_tributario || '1',
+              telefone: farm.telefone || '',
+              cep: farm.cep || '',
+              logradouro: farm.logradouro || '',
+              numero: farm.numero || '',
+              bairro: farm.bairro || '',
+              municipio: farm.municipio || '',
+              uf: farm.uf || '',
             }
           }),
         })
@@ -104,22 +129,53 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
       setError('Nome do grupo é obrigatório')
       return false
     }
+
     // Owner é opcional na edição (pode já existir)
     if (form.ownerName.trim() && form.ownerCpf.trim()) {
       const cpfClean = form.ownerCpf.replace(/\D/g, '')
-      if (cpfClean.length !== 11) {
-        setError('CPF deve ter 11 dígitos')
+      if (cpfClean.length !== 11 && cpfClean.length !== 14) {
+        setError('CPF/CNPJ do proprietário deve ter 11 ou 14 dígitos')
         return false
       }
     }
+
     if (form.ownerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.ownerEmail)) {
       setError('Email inválido')
       return false
     }
+
     if (form.ownerPassword.trim() && form.ownerPassword.length < 6) {
       setError('Senha deve ter pelo menos 6 caracteres')
       return false
     }
+
+    // Validação Fiscal (Se módulos ativos)
+    const hasNfeOrLoading = selectedModules.includes('nota-fiscal') || selectedModules.includes('carregamento')
+
+    if (hasNfeOrLoading) {
+      if (!form.focusNfeToken.trim()) {
+        setError('Token Focus NFe é obrigatório para os módulos selecionados')
+        return false
+      }
+
+      // Validar campos fiscais da fazenda
+      for (const farm of form.farms) {
+        if (!farm.inscricao_estadual.trim()) {
+          setError(`Inscrição Estadual é obrigatória para a fazenda ${farm.name}`)
+          return false
+        }
+        // Regime is always selected via dropdown (default '1') so strictly trim check might be redundant but safe
+        if (!farm.regime_tributario) {
+          setError(`Regime Tributário é obrigatório para a fazenda ${farm.name}`)
+          return false
+        }
+        if (!farm.cep.trim() || !farm.logradouro.trim() || !farm.numero.trim() || !farm.bairro.trim() || !farm.municipio.trim() || !farm.uf.trim()) {
+          setError(`Endereço completo é obrigatório para a fazenda ${farm.name} (NFe)`)
+          return false
+        }
+      }
+    }
+
     return true
   }
 
@@ -138,6 +194,7 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
       const payload: any = {
         group: {
           name: form.groupName.trim(),
+          focus_nfe_token: form.focusNfeToken.trim() || undefined,
         },
       }
 
@@ -155,12 +212,28 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
 
       // Adicionar fazendas
       if (form.farms.length > 0) {
-        payload.farms = form.farms.map(farm => ({
-          id: farm.id || undefined,
-          name: farm.name.trim(),
-          certificate_a1: farm.certificate_a1.trim() || undefined,
-          modules: selectedModules.length > 0 ? { enabled: selectedModules } : undefined,
-        }))
+        payload.farms = form.farms.map(farm => {
+          // Check logic for Single CNPJ: if Owner has Valid CNPJ (14), use it for Farm
+          const cpfClean = form.ownerCpf.replace(/\D/g, '')
+          const farmCnpjValue = cpfClean.length === 14 ? cpfClean : undefined
+
+          return {
+            id: farm.id || undefined,
+            name: farm.name.trim(),
+            modules: { enabled: selectedModules },
+            // Fiscal
+            cnpj: farmCnpjValue,
+            inscricao_estadual: farm.inscricao_estadual.trim() || undefined,
+            regime_tributario: farm.regime_tributario,
+            telefone: farm.telefone.trim() || undefined,
+            cep: farm.cep.replace(/\D/g, '') || undefined,
+            logradouro: farm.logradouro.trim() || undefined,
+            numero: farm.numero.trim() || undefined,
+            bairro: farm.bairro.trim() || undefined,
+            municipio: farm.municipio.trim() || undefined,
+            uf: farm.uf.trim() || undefined,
+          }
+        })
       }
 
       await groupsService.updateGroupFull(group.id, payload)
@@ -168,7 +241,7 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
       onClose()
     } catch (err: any) {
       let errorMessage = 'Erro ao atualizar grupo. Tente novamente.'
-      
+
       if (err.response?.data) {
         const errorData = err.response.data
         if (typeof errorData === 'string') {
@@ -186,7 +259,7 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
           }
         }
       }
-      
+
       setError(errorMessage)
       console.error('Error updating group:', err)
     } finally {
@@ -308,16 +381,136 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
                           placeholder="Ex: Fazenda São Paulo"
                         />
                       </label>
+
                       <label>
-                        Certificate A1
+                        Telefone
                         <input
                           type="text"
-                          value={farm.certificate_a1}
-                          onChange={(e) => handleFarmChange(index, 'certificate_a1', e.target.value)}
-                          placeholder="Opcional"
+                          value={farm.telefone}
+                          onChange={(e) => handleFarmChange(index, 'telefone', e.target.value)}
                         />
                       </label>
                     </div>
+
+                    <h5 style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>Endereço (Obrigatório para NFe)</h5>
+                    <div className="form-grid">
+                      <label>
+                        CEP
+                        <input type="text" value={farm.cep} onChange={(e) => handleFarmChange(index, 'cep', e.target.value)} maxLength={9} />
+                      </label>
+                      <label style={{ gridColumn: 'span 2' }}>
+                        Logradouro
+                        <input type="text" value={farm.logradouro} onChange={(e) => handleFarmChange(index, 'logradouro', e.target.value)} />
+                      </label>
+                      <label>
+                        Número
+                        <input type="text" value={farm.numero} onChange={(e) => handleFarmChange(index, 'numero', e.target.value)} />
+                      </label>
+                      <label>
+                        Bairro
+                        <input type="text" value={farm.bairro} onChange={(e) => handleFarmChange(index, 'bairro', e.target.value)} />
+                      </label>
+                      <label>
+                        Cidade
+                        <input type="text" value={farm.municipio} onChange={(e) => handleFarmChange(index, 'municipio', e.target.value)} />
+                      </label>
+                      <label>
+                        UF
+                        <input type="text" value={farm.uf} onChange={(e) => handleFarmChange(index, 'uf', e.target.value)} maxLength={2} />
+                      </label>
+                    </div>
+
+                    {(selectedModules.includes('nota-fiscal') || selectedModules.includes('carregamento')) && (
+                      <div style={{
+                        marginTop: '1.5rem',
+                        padding: '1.5rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <h5 style={{
+                          marginTop: 0,
+                          marginBottom: '1rem',
+                          color: '#0f172a',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          Configurações Fiscais
+                          <span style={{
+                            fontSize: '0.75rem',
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontWeight: 'normal'
+                          }}>
+                            Requerido para Módulos Selecionados
+                          </span>
+                        </h5>
+
+                        <div className="form-grid">
+                          {/* Token is Group Level, show here for context? Or separate? 
+                              Actually form.focusNfeToken is global. Show it in the first farm or separate group block?
+                              The user logic put it in Fiscal Block.
+                              Since EditGroup has multiple farms, showing Token here (global) might be confusing if duplicated.
+                              But strictly following CreateGroup logic: Token is in this block.
+                              If I have 2 farms, should I show Token 2 times? No.
+                              I will show Token ONLY for the first farm (index 0) or move it to Group Section.
+                              The user request was to group them.
+                              I'll put Token in the first farm's block OR handle it properly.
+                              Given `focusNfeToken` is on `form.` (root), not `farm.`, I should display it ONCE.
+                              I will add a specific block for Group Fiscal Config if modules enabled, OUTSIDE the farm loop?
+                              Or just display it in the first farm block.
+                          */}
+                          {index === 0 && (
+                            <label>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                Token Focus NFe (Produção)
+                                <span className="required">*</span>
+                              </div>
+                              <input
+                                type="password"
+                                value={form.focusNfeToken}
+                                onChange={handleChange('focusNfeToken')}
+                                placeholder="Insira o Token de Produção"
+                                required
+                              />
+                            </label>
+                          )}
+
+                          <label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              Inscrição Estadual
+                              <span className="required">*</span>
+                            </div>
+                            <input
+                              type="text"
+                              value={farm.inscricao_estadual}
+                              onChange={(e) => handleFarmChange(index, 'inscricao_estadual', e.target.value)}
+                              placeholder="Somente números"
+                              required
+                            />
+                          </label>
+
+                          <label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              Regime Tributário
+                              <span className="required">*</span>
+                            </div>
+                            <select
+                              value={farm.regime_tributario}
+                              onChange={(e) => handleFarmChange(index, 'regime_tributario', e.target.value)}
+                              required
+                            >
+                              <option value="1">Simples Nacional</option>
+                              <option value="2">Simples Nacional - Excesso</option>
+                              <option value="3">Regime Normal</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                     {index === 0 && (
                       <div className="modules-section" style={{ marginTop: '16px' }}>
                         <div className="modules-header">

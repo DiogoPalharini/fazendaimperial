@@ -1,78 +1,63 @@
 import { X } from 'lucide-react'
 import type { Carregamento } from '../types'
 import { formatDateTime } from '../utils'
-import { getTruckLabel } from '../constants'
 import '../TruckLoading.css'
 
-type CarregamentoDetailsModalProps = {
+type Props = {
   carregamento: Carregamento
   onClose: () => void
 }
 
-export default function CarregamentoDetailsModal({
-  carregamento,
-  onClose,
-}: CarregamentoDetailsModalProps) {
+export default function CarregamentoDetailsModal({ carregamento, onClose }: Props) {
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      aria-hidden="true"
+    >
       <div
         className="modal loading-modal loading-details-modal"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="details-title"
+        aria-describedby="details-subtitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
           <div>
-            <h3 className="modal-title">Detalhes do Carregamento</h3>
-            <p className="modal-subtitle">Informações completas do carregamento selecionado</p>
+            <h3 id="details-title" className="modal-title">
+              Detalhes do Carregamento
+            </h3>
+            <p id="details-subtitle" className="modal-subtitle">
+              Informações completas do carregamento selecionado
+            </p>
           </div>
-          <button type="button" className="close-btn" onClick={onClose} aria-label="Fechar">
+          <button
+            type="button"
+            className="close-btn"
+            onClick={onClose}
+            aria-label="Fechar modal"
+          >
             <X size={20} />
           </button>
         </header>
 
         <div className="carregamento-details-grid">
-          <div className="detail-item">
-            <span className="detail-label">Data/Hora</span>
-            <strong className="detail-value">{formatDateTime(carregamento.scheduledAt)}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Caminhão</span>
-            <strong className="detail-value">{getTruckLabel(carregamento.truck)}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Motorista</span>
-            <strong className="detail-value">{carregamento.driver}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Fazenda Origem</span>
-            <strong className="detail-value">{carregamento.farm}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Campo/Talhão</span>
-            <strong className="detail-value">{carregamento.field}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Variedade / Produto</span>
-            <strong className="detail-value">{carregamento.product}</strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Quantidade Carregada</span>
-            <strong className="detail-value">
-              {carregamento.quantity} {carregamento.unit}
-            </strong>
-          </div>
-
-          <div className="detail-item">
-            <span className="detail-label">Destino</span>
-            <strong className="detail-value">{carregamento.destination}</strong>
-          </div>
+          {[
+            { label: 'Data/Hora', value: formatDateTime(carregamento.scheduledAt) },
+            { label: 'Caminhão', value: carregamento.truck },
+            { label: 'Motorista', value: carregamento.driver },
+            { label: 'Fazenda Origem', value: carregamento.farm },
+            { label: 'Campo/Talhão', value: carregamento.field },
+            { label: 'Variedade / Produto', value: carregamento.product },
+            { label: 'Quantidade Carregada', value: `${carregamento.quantity} ${carregamento.unit}` },
+            { label: 'Destino', value: carregamento.destination },
+          ].map((item) => (
+            <div key={item.label} className="detail-item">
+              <span className="detail-label">{item.label}</span>
+              <strong className="detail-value">{item.value}</strong>
+            </div>
+          ))}
         </div>
 
         <footer className="modal-actions">
@@ -84,4 +69,3 @@ export default function CarregamentoDetailsModal({
     </div>
   )
 }
-

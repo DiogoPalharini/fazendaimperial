@@ -70,8 +70,12 @@ class CRUDGroup:
         owner_email: str,
         owner_password: str,
         farm_name: str | None = None,
+        # Argumentos antigos mantidos por compatibilidade ou atualizados
         farm_certificate_a1: str | None = None,
         farm_modules: dict | None = None,
+        # Novos argumentos NFe
+        focus_nfe_token: str | None = None,
+        farm_nfe_data: dict | None = None, 
     ) -> Group:
         """Cria grupo, owner e fazenda em uma transação"""
         from app.core.security import get_password_hash
@@ -82,7 +86,11 @@ class CRUDGroup:
             raise ValueError("Email já está em uso")
 
         # Criar grupo
-        db_group = Group(name=group_name, owner_id=None)
+        db_group = Group(
+            name=group_name, 
+            owner_id=None,
+            focus_nfe_token=focus_nfe_token
+        )
         db.add(db_group)
         db.flush()
 
@@ -105,12 +113,25 @@ class CRUDGroup:
 
         # Criar fazenda se fornecida
         if farm_name:
-            db_farm = Farm(
-                group_id=db_group.id,
-                name=farm_name,
-                certificate_a1=farm_certificate_a1,
-                modules=farm_modules,
-            )
+            farm_kwargs = {
+                "group_id": db_group.id,
+                "name": farm_name,
+                "certificate_a1": farm_certificate_a1,
+                "modules": farm_modules,
+            }
+            # Adicionar dados NFe se fornecidos
+            if farm_nfe_data:
+                # Filtrar chaves que existem no modelo Farm
+                allowed_keys = [
+                    'cnpj', 'inscricao_estadual', 'telefone',
+                    'logradouro', 'numero', 'bairro', 'municipio', 'uf', 'cep',
+                    'regime_tributario', 'default_cfop', 'default_natureza_operacao'
+                ]
+                for key in allowed_keys:
+                    if key in farm_nfe_data:
+                         farm_kwargs[key] = farm_nfe_data[key]
+
+            db_farm = Farm(**farm_kwargs)
             db.add(db_farm)
             db.flush()
 
@@ -128,6 +149,8 @@ class CRUDGroup:
         owner_cpf: str | None = None,
         owner_email: str | None = None,
         owner_password: str | None = None,
+
+        focus_nfe_token: str | None = None,
         farms_data: list[dict] | None = None,
     ) -> Group:
         """Atualiza grupo, owner e fazendas em uma transação"""
@@ -141,6 +164,11 @@ class CRUDGroup:
         # Atualizar nome do grupo
         if group_name is not None:
             db_group.name = group_name
+        
+        if focus_nfe_token is not None:
+            db_group.focus_nfe_token = focus_nfe_token
+            
+        if group_name is not None or focus_nfe_token is not None:
             db.add(db_group)
             db.flush()
 
@@ -180,6 +208,25 @@ class CRUDGroup:
                             db_farm.certificate_a1 = farm_data['certificate_a1']
                         if 'modules' in farm_data:
                             db_farm.modules = farm_data['modules']
+                        
+                        # Campos Fiscais / NFe
+                        if 'cnpj' in farm_data: 
+                            db_farm.cnpj = farm_data['cnpj']
+                        if 'inscricao_estadual' in farm_data:
+                            db_farm.inscricao_estadual = farm_data['inscricao_estadual']
+                        if 'regime_tributario' in farm_data:
+                            db_farm.regime_tributario = farm_data['regime_tributario']
+                        if 'telefone' in farm_data:
+                            db_farm.telefone = farm_data['telefone']
+                        
+                        # Endereço
+                        if 'cep' in farm_data: db_farm.cep = farm_data['cep']
+                        if 'logradouro' in farm_data: db_farm.logradouro = farm_data['logradouro']
+                        if 'numero' in farm_data: db_farm.numero = farm_data['numero']
+                        if 'bairro' in farm_data: db_farm.bairro = farm_data['bairro']
+                        if 'municipio' in farm_data: db_farm.municipio = farm_data['municipio']
+                        if 'uf' in farm_data: db_farm.uf = farm_data['uf']
+
                         db.add(db_farm)
                 else:
                     # Criar nova fazenda
@@ -188,6 +235,17 @@ class CRUDGroup:
                         name=farm_data.get('name', ''),
                         certificate_a1=farm_data.get('certificate_a1'),
                         modules=farm_data.get('modules'),
+                        # Novos campos
+                        cnpj=farm_data.get('cnpj'),
+                        inscricao_estadual=farm_data.get('inscricao_estadual'),
+                        regime_tributario=farm_data.get('regime_tributario', '1'),
+                        telefone=farm_data.get('telefone'),
+                        cep=farm_data.get('cep'),
+                        logradouro=farm_data.get('logradouro'),
+                        numero=farm_data.get('numero'),
+                        bairro=farm_data.get('bairro'),
+                        municipio=farm_data.get('municipio'),
+                        uf=farm_data.get('uf'),
                     )
                     db.add(db_farm)
             db.flush()
@@ -200,6 +258,12 @@ class CRUDGroup:
         """Deletar um grupo (cascade deleta fazendas e usuários)"""
         db_group = db.get(Group, group_id)
         if db_group:
+            # Desvincular owner primeiro para evitar dependência circular
+            db_group.owner_id = None
+            db.add(db_group)
+            db.commit() # Commit para efetivar o update no banco
+            db.refresh(db_group) # Recarregar estado
+
             db.delete(db_group)
             db.flush()
         return db_group

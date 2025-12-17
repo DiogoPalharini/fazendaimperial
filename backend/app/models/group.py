@@ -21,13 +21,16 @@ class Group(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     owner_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    # Token da Focus NFe (Multi-Tenant)
+    focus_nfe_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relacionamentos
     owner: Mapped['User'] = relationship(
         'User',
         back_populates='owned_group',
-        foreign_keys=[owner_id]
+        foreign_keys=[owner_id],
+        post_update=True
     )
     farms: Mapped[list['Farm']] = relationship(
         'Farm',

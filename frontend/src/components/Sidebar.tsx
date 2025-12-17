@@ -10,6 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Truck,
   FileText,
   Tractor,
@@ -32,10 +33,31 @@ type SidebarProps = {
   onToggle: () => void
 }
 
-const menuItems = [
+interface MenuItem {
+  key: string
+  path: string
+  translationKey: string
+  Icon: React.ElementType
+  children?: {
+    key: string
+    path: string
+    label: string
+  }[]
+}
+
+const menuItems: MenuItem[] = [
   { key: 'system-admin', path: '/admin/sistema', translationKey: 'sidebar.systemAdmin', Icon: ShieldCheck },
   { key: 'dashboard', path: '/dashboard', translationKey: 'sidebar.dashboard', Icon: LayoutDashboard },
-  { key: 'truck-loading', path: '/carregamento', translationKey: 'sidebar.truckLoading', Icon: Truck },
+  {
+    key: 'truck-loading',
+    path: '/carregamento', // Parent path (optional usage)
+    translationKey: 'sidebar.truckLoading', // Need to add this key
+    Icon: Truck,
+    children: [
+      { key: 'truck-loading-dashboard', path: '/carregamento/dashboard', label: 'Dashboard' },
+      { key: 'truck-loading-list', path: '/carregamento', label: 'Gerenciar Cargas' }
+    ]
+  },
   { key: 'invoice', path: '/nota-fiscal', translationKey: 'sidebar.invoice', Icon: FileText },
   { key: 'machines', path: '/maquinas', translationKey: 'sidebar.machines', Icon: Tractor },
   { key: 'inputs', path: '/insumos', translationKey: 'sidebar.inputs', Icon: Package },
@@ -69,19 +91,24 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({})
   const isActive = (path: string) => location.pathname === path
+
+  const toggleSubmenu = (key: string) => {
+    setOpenSubmenus(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   const ToggleIcon = isOpen ? ChevronLeft : ChevronRight
 
   // Filtrar menu items baseado no role do usuário e módulos permitidos
   const filteredMenuItems = useMemo(() => {
     if (!user) return []
-    
+
     // Se for system_admin, mostrar apenas Administração do Sistema
     if (user.base_role === 'system_admin') {
       return menuItems.filter(item => item.key === 'system-admin')
     }
-    
+
     // Para owner e outros roles, filtrar pelos módulos permitidos
     // Dashboard sempre deve aparecer
     if (allowedModules.length > 0) {
@@ -94,7 +121,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         return moduleKey ? allowedModules.includes(moduleKey) : false
       })
     }
-    
+
     // Se não tem módulos permitidos, mostrar apenas dashboard
     return menuItems.filter(item => item.key === 'dashboard')
   }, [user, allowedModules])
@@ -124,18 +151,58 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
         <nav id="sidebar-nav" className="sidebar-nav" aria-label="Navegação principal">
           <ul className="nav-list">
-            {filteredMenuItems.map(({ key, path, translationKey, Icon }) => (
-              <li className="nav-item" key={key}>
-                <Link
-                  to={path}
-                  className={`nav-link ${isActive(path) ? 'active' : ''}`}
-                  title={t(translationKey)}
-                >
-                  <Icon size={22} aria-hidden="true" className="nav-icon" />
-                  <span className="nav-label">{t(translationKey)}</span>
-                </Link>
-              </li>
-            ))}
+            {filteredMenuItems.map((item) => {
+              const { key, path, translationKey, Icon, children } = item
+              const hasChildren = children && children.length > 0
+              const isParentActive = hasChildren && children.some(child => isActive(child.path))
+              const isOpen = openSubmenus[key]
+
+              if (hasChildren) {
+                return (
+                  <li className="nav-item" key={key}>
+                    <button
+                      className={`nav-link ${isParentActive ? 'active' : ''}`}
+                      onClick={() => toggleSubmenu(key)}
+                      aria-expanded={isOpen}
+                    >
+                      <Icon size={22} aria-hidden="true" className="nav-icon" />
+                      <span className="nav-label">{t(translationKey)}</span>
+                      <ChevronDown
+                        size={16}
+                        className={`submenu-arrow ${isOpen ? 'open' : ''}`}
+                      />
+                    </button>
+                    {isOpen && (
+                      <ul className="submenu-list">
+                        {children.map(child => (
+                          <li key={child.key}>
+                            <Link
+                              to={child.path}
+                              className={`submenu-link ${isActive(child.path) ? 'active' : ''}`}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                )
+              }
+
+              return (
+                <li className="nav-item" key={key}>
+                  <Link
+                    to={path}
+                    className={`nav-link ${isActive(path) ? 'active' : ''}`}
+                    title={t(translationKey)}
+                  >
+                    <Icon size={22} aria-hidden="true" className="nav-icon" />
+                    <span className="nav-label">{t(translationKey)}</span>
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </nav>
 

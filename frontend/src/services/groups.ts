@@ -6,6 +6,17 @@ export interface Farm {
   certificate_a1?: string | null
   modules?: Record<string, any> | null
   created_at: string
+  // Fiscal
+  cnpj?: string
+  inscricao_estadual?: string
+  regime_tributario?: string
+  telefone?: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  bairro?: string
+  municipio?: string
+  uf?: string
 }
 
 export interface Owner {
@@ -22,6 +33,7 @@ export interface Group {
   created_at: string
   farms: Farm[]
   owner?: Owner | null
+  focus_nfe_token?: string
 }
 
 export interface OwnerCreate {
@@ -35,11 +47,25 @@ export interface FarmCreate {
   name: string
   certificate_a1?: string
   modules?: Record<string, any>
+  // NFe Fields
+  cnpj?: string
+  inscricao_estadual?: string
+  telefone?: string
+  logradouro?: string
+  numero?: string
+  bairro?: string
+  municipio?: string
+  uf?: string
+  cep?: string
+  regime_tributario?: string
+  default_cfop?: string
+  default_natureza_operacao?: string
 }
 
 export interface GroupWithOwnerFarmCreate {
   group: {
     name: string
+    focus_nfe_token?: string
   }
   owner: OwnerCreate
   farm?: FarmCreate

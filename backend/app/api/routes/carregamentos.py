@@ -1,6 +1,6 @@
-
 from datetime import datetime
 import json
+import traceback # Added for debugging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -22,38 +22,28 @@ router = APIRouter()
 # ============================================================================
 # DEBUG HOMOLOGAÇÃO ATIVO - REMOVER QUANDO FOR PARA PRODUÇÃO
 # ============================================================================
-@router.post('/gerar-nfe', status_code=status.HTTP_201_CREATED)
-async def gerar_nfe(
+@router.post('/', status_code=status.HTTP_201_CREATED, response_model=CarregamentoRead)
+async def create_carregamento(
     carregamento_form: CarregamentoForm,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    
-    from app.core.config import get_settings, clear_settings_cache
+    """
+    Cria um novo carregamento.
+    Se type == 'EXTERNAL', gera NFe automaticamente.
+    Se type == 'INTERNAL', apenas salva no banco.
+    """
+    from app.core.config import get_settings
     from app.schemas.carregamento import CarregamentoCreate
-
-    # Limpar cache para garantir que pega o token atualizado do .env
-    clear_settings_cache()
     settings = get_settings()
-    
-    # DEBUG: Logs iniciais
-    print("\n" + "="*60)
-    print("FOCUS NFE DEBUG - INÍCIO")
-    print("="*60)
-    print(f"Ambiente configurado: {settings.FOCUS_NFE_AMBIENTE}")
-    print(f"Token carregado: {'OK' if settings.FOCUS_NFE_TOKEN else 'VAZIO!!!'}")
-    print(f"Primeiros 15 caracteres do token: {settings.FOCUS_NFE_TOKEN[:15] if settings.FOCUS_NFE_TOKEN else 'None'}")
-    print(f"Tamanho total do token: {len(settings.FOCUS_NFE_TOKEN) if settings.FOCUS_NFE_TOKEN else 0} caracteres")
-    print("="*60 + "\n")
 
+    # --- 1. Validações e Conversões Comuns ---
     try:
         # Converter scheduledAt para datetime
-        # Aceita tanto formato ISO (com timezone) quanto datetime-local (sem timezone)
         scheduled_at_str = carregamento_form.scheduledAt
         if 'Z' in scheduled_at_str:
             scheduled_at_str = scheduled_at_str.replace('Z', '+00:00')
         elif '+' not in scheduled_at_str and scheduled_at_str.count(':') >= 2:
-            # Formato datetime-local sem timezone, adicionar timezone local
             scheduled_at_str = scheduled_at_str + '+00:00'
         scheduled_at = datetime.fromisoformat(scheduled_at_str)
     except (ValueError, AttributeError) as exc:
@@ -62,7 +52,6 @@ async def gerar_nfe(
             detail=f'Formato de data inválido: {carregamento_form.scheduledAt}. Erro: {str(exc)}'
         ) from exc
 
-    # Converter quantity de string para float
     try:
         quantity = float(carregamento_form.quantity)
     except ValueError as exc:
@@ -71,10 +60,41 @@ async def gerar_nfe(
             detail=f'Quantidade inválida: {carregamento_form.quantity}'
         ) from exc
 
-    # Gerar referência única
-    referencia = gerar_referencia(settings.FOCUS_NFE_AMBIENTE)
+    # --- 2. Cálculos de Peso e Descontos ---
+    from app.services.calculo_peso_service import calcular_descontos
+    from app.models.armazem import Armazem
+    
+    # 2.1 Peso Líquido
+    peso_liquido = None
+    if carregamento_form.peso_bruto_kg and carregamento_form.tara_kg:
+        peso_liquido = float(carregamento_form.peso_bruto_kg) - float(carregamento_form.tara_kg)
+    
+    # 2.2 Parâmetros da Fazenda (Padrão)
+    # TODO: Buscar de configurações globais se existir, por enquanto hardcoded conforme pedido
+    desc_fazenda = calcular_descontos(
+        peso_liquido=peso_liquido or quantity, # Fallback para quantity se não tiver peso liquido
+        umidade_medida=float(carregamento_form.umidade_percent or 0),
+        impurezas_medida=float(carregamento_form.impurezas_percent or 0),
+        umidade_padrao=14.0,
+        fator_umidade=1.5,
+        impurezas_padrao=1.0
+    )
+    
+    # 2.3 Parâmetros do Armazém
+    desc_armazem = None
+    if carregamento_form.armazem_destino_id:
+        armazem = db.query(Armazem).filter(Armazem.id == carregamento_form.armazem_destino_id).first()
+        if armazem:
+            desc_armazem = calcular_descontos(
+                peso_liquido=peso_liquido or quantity,
+                umidade_medida=float(carregamento_form.umidade_percent or 0),
+                impurezas_medida=float(carregamento_form.impurezas_percent or 0),
+                umidade_padrao=float(armazem.umidade_padrao),
+                fator_umidade=float(armazem.fator_umidade),
+                impurezas_padrao=float(armazem.impurezas_padrao)
+            )
 
-    # Criar registro no banco com status "pendente"
+    # --- 3. Criação do Objeto no Banco ---
     carregamento_create = CarregamentoCreate(
         truck=carregamento_form.truck,
         driver=carregamento_form.driver,
@@ -85,27 +105,55 @@ async def gerar_nfe(
         unit=carregamento_form.unit,
         destination=carregamento_form.destination,
         scheduled_at=scheduled_at,
-        nfe_status='pendente',
+        type=carregamento_form.type,
+        nfe_status='pendente' if carregamento_form.type in ['remessa', 'venda'] else None,
+        
+        # Novos Campos
+        peso_estimado_kg=carregamento_form.peso_estimado_kg,
+        peso_bruto_kg=carregamento_form.peso_bruto_kg,
+        tara_kg=carregamento_form.tara_kg,
+        peso_liquido_kg=peso_liquido,
+        umidade_percent=carregamento_form.umidade_percent,
+        impurezas_percent=carregamento_form.impurezas_percent,
+        peso_com_desconto_fazenda=desc_fazenda['peso_com_desconto'],
+        peso_com_desconto_armazem=desc_armazem['peso_com_desconto'] if desc_armazem else None,
+        peso_recebido_final_kg=carregamento_form.peso_recebido_final_kg,
+        armazem_destino_id=carregamento_form.armazem_destino_id,
+        
+        # Comparativo Empresa
+        umidade_empresa_percent=carregamento_form.umidade_empresa_percent,
+        impurezas_empresa_percent=carregamento_form.impurezas_empresa_percent,
+        peso_com_desconto_empresa=carregamento_form.peso_com_desconto_empresa
     )
 
-    # Criar registro no banco com status "pendente" (sem commit ainda)
-    db_carregamento = carregamento_crud.create(db, obj_in=carregamento_create, commit=False)
+    # Salva inicialmente (sem commit se for EXTERNAL para poder rollback em caso de erro na API)
+    # Se for INTERNAL, já podemos commitar
+    should_commit = (carregamento_form.type == 'interno')
+    db_carregamento = carregamento_crud.create(db, obj_in=carregamento_create, commit=should_commit)
+
+    # --- 4. Fluxo INTERNO (Sem NFe) ---
+    if carregamento_form.type == 'interno':
+        return db_carregamento
+
+    # --- 5. Fluxo EXTERNO (Com NFe) ---
+    # Se chegou aqui, type == 'remessa' ou 'venda'
+    
+    # Gerar referência única
+    referencia = gerar_referencia(settings.FOCUS_NFE_AMBIENTE)
+    
+    # Atualizar referência no objeto (ainda na memória/transação)
+    db_carregamento.nfe_ref = referencia
 
     try:
-        # Forçar dados mágicos de homologação ANTES de montar JSON
+        # Lógica de Homologação vs Produção
         if settings.FOCUS_NFE_AMBIENTE == "homologacao":
-            cnpj_emitente = "11111111000111"
-            nome_emitente = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
-            cnpj_destinatario = "99999999000191"
+            cnpj_emitente = "63661106000156"
+            nome_emitente = "INTERLINK AGRORURAL SOFTWARE LTDA"
+            cnpj_destinatario = "63661106000156"
             nome_destinatario = "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
             descricao_item = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL"
             placa_limpa = ''.join(filter(str.isalnum, carregamento_form.truck.upper()))[:8]
-            print(f"DEBUG: Dados mágicos de homologação aplicados")
-            print(f"  CNPJ Emitente: {cnpj_emitente}")
-            print(f"  CNPJ Destinatário: {cnpj_destinatario}")
-            print(f"  Placa limpa: {placa_limpa}")
         else:
-            # Em produção manter os valores reais (depois você preenchemos)
             cnpj_emitente = ''
             nome_emitente = carregamento_form.farm
             cnpj_destinatario = None
@@ -113,7 +161,6 @@ async def gerar_nfe(
             descricao_item = ''
             placa_limpa = carregamento_form.truck
         
-        # Preparar dados para montar JSON da NFe
         carregamento_dict = {
             'truck': placa_limpa if settings.FOCUS_NFE_AMBIENTE == "homologacao" else carregamento_form.truck,
             'driver': carregamento_form.driver,
@@ -124,51 +171,72 @@ async def gerar_nfe(
             'unit': carregamento_form.unit,
             'destination': carregamento_form.destination,
             'scheduled_at': scheduled_at.isoformat(),
+            # Novos campos opcionais do form
+            'cnpj_emitente': carregamento_form.cnpj_emitente,
+            'nome_emitente': carregamento_form.nome_emitente,
+            'cnpj_destinatario': carregamento_form.cnpj_destinatario,
+            'nome_destinatario': carregamento_form.nome_destinatario,
+            'cfop': carregamento_form.cfop,
+            'natureza_operacao': carregamento_form.natureza_operacao,
+            'ncm': carregamento_form.ncm,
+            'valor_unitario': carregamento_form.valor_unitario,
+            # Add Address Fields
+            'logradouro_destinatario': carregamento_form.logradouro_destinatario,
+            'numero_destinatario': carregamento_form.numero_destinatario,
+            'bairro_destinatario': carregamento_form.bairro_destinatario,
+            'municipio_destinatario': carregamento_form.municipio_destinatario,
+            'uf_destinatario': carregamento_form.uf_destinatario,
+            'cep_destinatario': carregamento_form.cep_destinatario,
+            'inscricao_estadual_destinatario': carregamento_form.inscricao_estadual_destinatario,
+            'indicador_inscricao_estadual_destinatario': carregamento_form.indicador_inscricao_estadual_destinatario,
         }
 
-        # Endereços (usar padrão para homologação)
-        endereco_emitente = {
-            'logradouro': 'RUA EXEMPLO',
-            'numero': '123',
-            'bairro': 'CENTRO',
-            'municipio': 'SAO PAULO',
-            'uf': 'SP',
-            'cep': '01000000',
-            'inscricao_estadual': 'ISENTO',
-            'cnae': '0111301',
-        }
+        # Buscar dados completos da Fazenda (Emitente)
+        from app.models.farm import Farm
+        farm_obj = db.query(Farm).filter(
+            Farm.name == carregamento_form.farm, 
+            Farm.group_id == current_user.group_id
+        ).first()
+        
+        if not farm_obj:
+            # Fallback (em teoria não deveria acontecer se o frontend listar corretamente)
+            raise HTTPException(status_code=400, detail=f"Fazenda '{carregamento_form.farm}' não encontrada para este usuário")
 
-        endereco_destinatario = {
-            'logradouro': 'RUA EXEMPLO DEST',
-            'numero': '456',
-            'bairro': 'CENTRO',
-            'municipio': 'SAO PAULO',
-            'uf': 'SP',
-            'cep': '01000000',
-        }
+        # Buscar Grupo e Token
+        from app.models.group import Group
+        group_obj = db.get(Group, current_user.group_id)
+        
+        # Em homologação, podemos aceitar sem token, mas em produção NÃO
+        focus_token = ''
+        if group_obj and group_obj.focus_nfe_token:
+             focus_token = group_obj.focus_nfe_token
+        elif settings.FOCUS_NFE_AMBIENTE == 'homologacao':
+             focus_token = settings.FOCUS_NFE_TOKEN # Fallback do .env apenas em homologação
+        
+        if not focus_token:
+             raise HTTPException(status_code=400, detail="Grupo não possui Token da Focus NFe configurado para emissão fiscal")
 
-        # Montar JSON da NFe (passar descricao_item se for homologação)
+        # Armazém já foi buscado anteriormente se existir ID
+        # armazem = db.query(Armazem)... (linhas 86-87)
+
+        # Determinar Tipo da NFe
+        from app.core.nfe_enums import NfeType
+        nfe_type_map = {
+            'remessa': NfeType.REMESSA,
+            'venda': NfeType.VENDA,
+        }
+        nfe_type = nfe_type_map.get(carregamento_form.type, NfeType.REMESSA)
+
         nfe_data = montar_json_nfe(
             carregamento=carregamento_dict,
             referencia=referencia,
-            cnpj_emitente=cnpj_emitente,
-            nome_emitente=nome_emitente,
-            endereco_emitente=endereco_emitente,
-            cnpj_destinatario=cnpj_destinatario,
-            nome_destinatario=nome_destinatario,
-            endereco_destinatario=endereco_destinatario,
+            farm_obj=farm_obj,
+            armazem_obj=armazem if 'armazem' in locals() and armazem else None,
             descricao_item_homologacao=descricao_item if settings.FOCUS_NFE_AMBIENTE == "homologacao" else None,
+            nfe_type=nfe_type
         )
         
-        # DEBUG: Mostrar JSON antes de enviar
-        print("\n" + "="*60)
-        print("JSON enviado para Focus NFe (primeiros 500 caracteres):")
-        print("="*60)
-        json_str = json.dumps(nfe_data, indent=2, ensure_ascii=False)
-        print(json_str[:500] + ("..." if len(json_str) > 500 else ""))
-        print("="*60 + "\n")
-
-        # Atualizar status para "processando" (sem commit ainda)
+        # Atualizar status para "processando"
         carregamento_crud.update_nfe_data(
             db,
             db_obj=db_carregamento,
@@ -179,42 +247,28 @@ async def gerar_nfe(
 
         # Enviar para Focus NFe
         try:
-            response_focus = await enviar_nfe_focus(nfe_data)
+            response_focus = await enviar_nfe_focus(nfe_data, token=focus_token)
         except Exception as focus_error:
-            # DEBUG: Mostrar erro completo
-            print("\n" + "="*60)
-            print("ERRO COMPLETO DA FOCUS NFE:")
-            print("="*60)
-            print(f"Tipo do erro: {type(focus_error).__name__}")
-            print(f"Mensagem: {str(focus_error)}")
-            
-            # Tentar extrair mais detalhes se for erro HTTP
-            if hasattr(focus_error, 'response'):
-                print(f"Status HTTP: {focus_error.response.status_code}")
-                try:
-                    error_json = focus_error.response.json()
-                    print("Resposta JSON:")
-                    print(json.dumps(error_json, indent=2, ensure_ascii=False))
-                except:
-                    print("Resposta texto:")
-                    print(focus_error.response.text[:1000])
-            print("="*60 + "\n")
-            
-            # Fazer rollback se der erro na Focus
+            # Em caso de erro na API externa, fazemos rollback do carregamento criado
             db.rollback()
+            print(f"Erro ao enviar NFe: {focus_error}")
+            traceback.print_exc() # Print full traceback
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f'Erro ao enviar NFe para Focus: {str(focus_error)}'
             ) from focus_error
 
-        # Processar resposta da Focus NFe
+        # Processar resposta
         status_nfe = response_focus.get('status', 'erro')
         protocolo = response_focus.get('protocolo')
         chave = response_focus.get('chave_nfe')
+        # Fix: Truncation Error (DB Limit 44, Focus returns 'NFe'+44)
+        if chave and chave.startswith('NFe'):
+             chave = chave[3:]
+             
         xml_url = response_focus.get('caminho_xml_nota_fiscal')
         danfe_url = response_focus.get('caminho_danfe')
 
-        # Mapear status da Focus para nosso status
         status_mapeado = {
             'autorizado': 'autorizado',
             'processando': 'processando',
@@ -223,7 +277,7 @@ async def gerar_nfe(
             'denegado': 'erro',
         }.get(status_nfe, 'erro')
 
-        # Atualizar registro com dados da NFe (sem commit ainda)
+        # Atualizar registro final
         db_carregamento = carregamento_crud.update_nfe_data(
             db,
             db_obj=db_carregamento,
@@ -232,30 +286,187 @@ async def gerar_nfe(
             nfe_chave=chave,
             nfe_xml_url=xml_url,
             nfe_danfe_url=danfe_url,
-            commit=False,
+            commit=True, # Agora sim commita tudo
         )
-
-        # Commit final se tudo deu certo
-        db.commit()
-        db.refresh(db_carregamento)
-
-        # Retornar apenas os campos necessários para o frontend
-        return {
-            'id': db_carregamento.id,
-            'nfe_ref': db_carregamento.nfe_ref,
-            'nfe_status': db_carregamento.nfe_status,
-            'nfe_xml_url': db_carregamento.nfe_xml_url,
-            'nfe_danfe_url': db_carregamento.nfe_danfe_url,
-        }
+        
+        return db_carregamento
 
     except HTTPException:
-        # Re-raise HTTP exceptions (já faz rollback se necessário)
         raise
     except Exception as exc:
-        # Em caso de qualquer outro erro, fazer rollback
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Erro interno ao processar NFe: {str(exc)}'
+            detail=f'Erro interno ao processar carregamento: {str(exc)}'
         ) from exc
+
+
+@router.get('/', response_model=list[CarregamentoRead])
+async def list_carregamentos(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os carregamentos.
+    """
+    carregamentos = carregamento_crud.get_multi(db, skip=skip, limit=limit)
+    return carregamentos
+
+
+
+@router.get('/distinct-values', response_model=list[str])
+async def get_distinct_values(
+    field: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna uma lista de valores únicos para um campo específico (ex: truck, driver, product).
+    Útil para autocomplete no frontend.
+    """
+    from app.models.carregamento import Carregamento
+    from sqlalchemy import distinct
+    
+    allowed_fields = ['truck', 'driver', 'product', 'field', 'destination', 'unit']
+    if field not in allowed_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Campo inválido. Permitidos: {', '.join(allowed_fields)}"
+        )
+    
+    # Mapeia string para coluna do modelo
+    column_map = {
+        'truck': Carregamento.truck,
+        'driver': Carregamento.driver,
+        'product': Carregamento.product,
+        'field': Carregamento.field,
+        'destination': Carregamento.destination,
+        'unit': Carregamento.unit,
+    }
+    
+    target_column = column_map[field]
+    
+    # Busca valores distintos não nulos
+    results = db.query(distinct(target_column)).filter(target_column != None).all() # noqa: E711
+    
+    # Flatten list of tuples [('val1',), ('val2',)] -> ['val1', 'val2']
+    values = [r[0] for r in results if r[0]]
+    
+    return sorted(values)
+
+
+@router.get('/{id}', response_model=CarregamentoRead)
+async def get_carregamento(
+    id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtém um carregamento pelo ID.
+    """
+    carregamento = carregamento_crud.get(db, id=id)
+    if not carregamento:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Carregamento não encontrado",
+        )
+    return carregamento
+
+
+
+@router.put('/{id}', response_model=CarregamentoRead)
+async def update_carregamento(
+    id: int,
+    carregamento_in: CarregamentoForm,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Atualiza um carregamento existente.
+    Recalcula pesos e descontos.
+    """
+    from app.schemas.carregamento import CarregamentoUpdate
+    from app.services.calculo_peso_service import calcular_descontos
+    from app.models.armazem import Armazem
+
+    carregamento = carregamento_crud.get(db, id=id)
+    if not carregamento:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Carregamento não encontrado",
+        )
+
+    # --- 1. Cálculos de Peso e Descontos ---
+    
+    # 1.1 Peso Líquido
+    peso_liquido = None
+    if carregamento_in.peso_bruto_kg and carregamento_in.tara_kg:
+        peso_liquido = float(carregamento_in.peso_bruto_kg) - float(carregamento_in.tara_kg)
+    
+    # Se não tiver peso liquido calculado, tenta usar o quantity se for numérico
+    base_calc = peso_liquido
+    if base_calc is None:
+        try:
+            base_calc = float(carregamento_in.quantity)
+        except:
+            base_calc = 0.0
+
+    # 1.2 Parâmetros da Fazenda (Padrão)
+    desc_fazenda = calcular_descontos(
+        peso_liquido=base_calc,
+        umidade_medida=float(carregamento_in.umidade_percent or 0),
+        impurezas_medida=float(carregamento_in.impurezas_percent or 0),
+        umidade_padrao=14.0,
+        fator_umidade=1.5,
+        impurezas_padrao=1.0
+    )
+    
+    # 1.3 Parâmetros do Armazém
+    desc_armazem = None
+    if carregamento_in.armazem_destino_id:
+        armazem = db.query(Armazem).filter(Armazem.id == carregamento_in.armazem_destino_id).first()
+        if armazem:
+            desc_armazem = calcular_descontos(
+                peso_liquido=base_calc,
+                umidade_medida=float(carregamento_in.umidade_percent or 0),
+                impurezas_medida=float(carregamento_in.impurezas_percent or 0),
+                umidade_padrao=float(armazem.umidade_padrao),
+                fator_umidade=float(armazem.fator_umidade),
+                impurezas_padrao=float(armazem.impurezas_padrao)
+            )
+
+    # --- 2. Preparar Update ---
+    # Converter Form para Update Schema
+    # Precisamos mapear os campos manualmente ou usar dict
+    
+    update_data = carregamento_in.dict(exclude_unset=True)
+    
+    # Atualizar campos calculados
+    update_data['peso_liquido_kg'] = peso_liquido
+    update_data['peso_com_desconto_fazenda'] = desc_fazenda['peso_com_desconto']
+    update_data['peso_com_desconto_armazem'] = desc_armazem['peso_com_desconto'] if desc_armazem else None
+    
+    # Converter scheduledAt se estiver presente
+    if 'scheduledAt' in update_data:
+        try:
+            scheduled_at_str = update_data['scheduledAt']
+            if 'Z' in scheduled_at_str:
+                scheduled_at_str = scheduled_at_str.replace('Z', '+00:00')
+            elif '+' not in scheduled_at_str and scheduled_at_str.count(':') >= 2:
+                scheduled_at_str = scheduled_at_str + '+00:00'
+            update_data['scheduled_at'] = datetime.fromisoformat(scheduled_at_str)
+            del update_data['scheduledAt']
+        except:
+            pass
+
+    # Atualizar no banco
+    # Nota: carregamento_crud.update espera um schema Update ou dict.
+    # Vamos passar dict com os campos mapeados.
+    
+    carregamento_updated = carregamento_crud.update(db, db_obj=carregamento, obj_in=update_data)
+    return carregamento_updated
+
+
 

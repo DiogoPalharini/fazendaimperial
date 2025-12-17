@@ -95,7 +95,7 @@ const FINANCIAL_FLOW = [
 
 
 const WEATHER_NOW = {
-  location: 'Sede • Fazenda Imperial',
+  location: 'Sede • Integra Rural',
   condition: 'Céu parcialmente nublado',
   temperature: '27°C',
   feelsLike: '30°C',

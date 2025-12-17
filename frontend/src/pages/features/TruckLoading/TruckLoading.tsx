@@ -1,28 +1,43 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
-import CarregamentoModal from './components/CarregamentoModal'
-import CarregamentoDetailsModal from './components/CarregamentoDetailsModal'
-import { formatDateTime } from './utils'
-import type { Carregamento, CarregamentoForm } from './types'
+import { useQuery } from '@tanstack/react-query'
+import { formatDateTime, formatNumber } from './utils'
 import { carregamentosService } from '../../../services/carregamentos'
-import {
-  AVAILABLE_TRUCKS,
-  getTruckLabel,
-  AVAILABLE_FARMS,
-  AVAILABLE_DESTINATIONS,
-  MOCK_CARREGAMENTOS,
-} from './constants'
 import '../FeaturePage.css'
 import './TruckLoading.css'
 
 export default function TruckLoading() {
-  const [carregamentos, setCarregamentos] = useState<Carregamento[]>(MOCK_CARREGAMENTOS)
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterTruck, setFilterTruck] = useState('')
   const [filterFarm, setFilterFarm] = useState('')
   const [filterDestination, setFilterDestination] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedCarregamento, setSelectedCarregamento] = useState<Carregamento | null>(null)
+
+  // Fetch Carregamentos
+  const { data: carregamentos = [], isLoading: loading } = useQuery({
+    queryKey: ['carregamentos'],
+    queryFn: async () => {
+      const data = await carregamentosService.list()
+      return data
+    }
+  })
+
+  // Derived Filters (Unique Values from Data)
+  const availableTrucks = useMemo(() => {
+    const trucks = new Set(carregamentos.map(c => c.truck).filter(Boolean))
+    return Array.from(trucks).sort()
+  }, [carregamentos])
+
+  const availableFarms = useMemo(() => {
+    const farms = new Set(carregamentos.map(c => c.farm).filter(Boolean))
+    return Array.from(farms).sort()
+  }, [carregamentos])
+
+  const availableDestinations = useMemo(() => {
+    const destinations = new Set(carregamentos.map(c => c.destination).filter(Boolean))
+    return Array.from(destinations).sort()
+  }, [carregamentos])
 
   const carregamentosFiltrados = useMemo(() => {
     return carregamentos.filter((c) => {
@@ -40,39 +55,21 @@ export default function TruckLoading() {
     })
   }, [carregamentos, searchQuery, filterTruck, filterFarm, filterDestination])
 
-  const handleSave = async (carregamento: CarregamentoForm) => {
-    try {
-      // Converter datetime-local para ISO format com timezone
-      const scheduledAtISO = carregamento.scheduledAt
-        ? new Date(carregamento.scheduledAt).toISOString()
-        : new Date().toISOString()
-      
-      // Preparar dados para envio (garantir formato correto)
-      const carregamentoParaEnvio = {
-        ...carregamento,
-        scheduledAt: scheduledAtISO,
-      }
-      
-      // Chamar API para gerar NFe
-      const response = await carregamentosService.gerarNFe(carregamentoParaEnvio)
-      
-      // Criar objeto Carregamento com os dados retornados
-      const novoCarregamento: Carregamento = {
-        ...carregamentoParaEnvio,
-        id: String(response.id),
-        nfe_ref: response.nfe_ref,
-        nfe_status: response.nfe_status,
-        nfe_xml_url: response.nfe_xml_url,
-        nfe_danfe_url: response.nfe_danfe_url,
-      }
-      
-      setCarregamentos((prev) => [novoCarregamento, ...prev])
-      setModalOpen(false)
-    } catch (error) {
-      console.error('Erro ao gerar NFe:', error)
-      // Aqui você pode adicionar uma notificação de erro para o usuário
-      alert('Erro ao gerar NFe. Por favor, tente novamente.')
+
+
+  const getBadgeColor = (type: string) => {
+    switch (type) {
+      case 'venda': return '#10b981' // green
+      case 'remessa': return '#3b82f6' // blue
+      default: return '#6b7280' // gray (interno)
     }
+  }
+
+  const getDiffColor = (diff: number | undefined | null) => {
+    if (diff === undefined || diff === null) return 'inherit'
+    if (diff < -100) return '#ef4444' // red
+    if (diff >= -100 && diff <= -20) return '#eab308' // yellow
+    return 'inherit'
   }
 
   return (
@@ -80,9 +77,7 @@ export default function TruckLoading() {
       <header className="feature-header">
         <h2 className="feature-title">Carregamento de Caminhão</h2>
         <p className="feature-description">
-          Organize cada expedição com controle total sobre veículos, origens e destinos. Utilize os
-          cadastros existentes de caminhões, motoristas, fazendas e talhões para garantir fidelidade
-          das informações.
+          Organize cada expedição com controle total sobre veículos, origens e destinos.
         </p>
       </header>
 
@@ -107,9 +102,9 @@ export default function TruckLoading() {
               onChange={(e) => setFilterTruck(e.target.value)}
             >
               <option value="">Todos</option>
-              {AVAILABLE_TRUCKS.map((truck) => (
-                <option key={truck.value} value={truck.value}>
-                  {truck.label}
+              {availableTrucks.map((truck) => (
+                <option key={truck} value={truck}>
+                  {truck}
                 </option>
               ))}
             </select>
@@ -123,7 +118,7 @@ export default function TruckLoading() {
               onChange={(e) => setFilterFarm(e.target.value)}
             >
               <option value="">Todas</option>
-              {AVAILABLE_FARMS.map((farm) => (
+              {availableFarms.map((farm) => (
                 <option key={farm} value={farm}>
                   {farm}
                 </option>
@@ -139,7 +134,7 @@ export default function TruckLoading() {
               onChange={(e) => setFilterDestination(e.target.value)}
             >
               <option value="">Todos</option>
-              {AVAILABLE_DESTINATIONS.map((destination) => (
+              {availableDestinations.map((destination) => (
                 <option key={destination} value={destination}>
                   {destination}
                 </option>
@@ -150,14 +145,16 @@ export default function TruckLoading() {
       </div>
 
       <div className="loading-actions">
-        <button type="button" className="add-button" onClick={() => setModalOpen(true)}>
+        <button type="button" className="add-button" onClick={() => navigate('/carregamento/novo')}>
           <Plus size={20} />
           Adicionar Carregamento
         </button>
       </div>
 
       <div className="table-wrapper">
-        {carregamentosFiltrados.length === 0 ? (
+        {loading ? (
+          <div className="loading-state">Carregando...</div>
+        ) : carregamentosFiltrados.length === 0 ? (
           <div className="empty">Nenhum carregamento encontrado.</div>
         ) : (
           <table className="table">
@@ -169,53 +166,61 @@ export default function TruckLoading() {
                 <th>Fazenda</th>
                 <th>Talhão</th>
                 <th>Produto</th>
-                <th>Quantidade</th>
-                <th>Destino</th>
+                <th>Peso Est. (kg)</th>
+                <th>Peso Líq. (kg)</th>
+                <th>Desc. Faz. (kg)</th>
+                <th>Desc. Arm. (kg)</th>
+                <th>Diferença (kg)</th>
+                <th>Tipo</th>
+                <th>Status NFe</th>
               </tr>
             </thead>
             <tbody>
-              {carregamentosFiltrados.map((carregamento, index) => (
-                <tr
-                  key={carregamento.id}
-                  className={`carregamento-row ${index % 2 === 0 ? 'alt' : ''}`}
-                  onClick={() => setSelectedCarregamento(carregamento)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelectedCarregamento(carregamento)
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <td>{formatDateTime(carregamento.scheduledAt)}</td>
-                  <td>{getTruckLabel(carregamento.truck)}</td>
-                  <td>{carregamento.driver}</td>
-                  <td>{carregamento.farm}</td>
-                  <td>{carregamento.field}</td>
-                  <td>{carregamento.product}</td>
-                  <td>
-                    {carregamento.quantity} {carregamento.unit}
-                  </td>
-                  <td>{carregamento.destination}</td>
-                </tr>
-              ))}
+              {carregamentosFiltrados.map((carregamento, index) => {
+                const diff = carregamento.peso_com_desconto_fazenda && carregamento.peso_com_desconto_armazem
+                  ? carregamento.peso_com_desconto_fazenda - carregamento.peso_com_desconto_armazem
+                  : null
+
+                return (
+                  <tr
+                    key={carregamento.id}
+                    className={`carregamento-row ${index % 2 === 0 ? 'alt' : ''}`}
+                    onClick={() => navigate(`/carregamento/${carregamento.id}`)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <td>{formatDateTime(carregamento.scheduledAt)}</td>
+                    <td>{carregamento.truck}</td>
+                    <td>{carregamento.driver}</td>
+                    <td>{carregamento.farm}</td>
+                    <td>{carregamento.field}</td>
+                    <td>{carregamento.product}</td>
+                    <td>{formatNumber(carregamento.peso_estimado_kg)}</td>
+                    <td>{formatNumber(carregamento.peso_liquido_kg)}</td>
+                    <td>{formatNumber(carregamento.peso_com_desconto_fazenda)}</td>
+                    <td>{formatNumber(carregamento.peso_com_desconto_armazem)}</td>
+                    <td style={{ color: getDiffColor(diff), fontWeight: diff && diff < -20 ? 'bold' : 'normal' }}>
+                      {formatNumber(diff)}
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        color: 'white',
+                        backgroundColor: getBadgeColor(carregamento.type)
+                      }}>
+                        {carregamento.type?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>{carregamento.nfe_status || '-'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
       </div>
-
-      {modalOpen && (
-        <CarregamentoModal onClose={() => setModalOpen(false)} onSave={handleSave} />
-      )}
-
-      {selectedCarregamento && (
-        <CarregamentoDetailsModal
-          carregamento={selectedCarregamento}
-          onClose={() => setSelectedCarregamento(null)}
-        />
-      )}
     </div>
   )
 }
-

@@ -40,14 +40,14 @@ const translations: Record<Language, Record<string, string>> = {
     'common.status': 'Status',
     'common.date': 'Data',
     'common.actions': 'Ações',
-    
+
     // Layout
-    'layout.appName': 'Fazenda Imperial',
+    'layout.appName': 'Integra Rural',
     'layout.hello': 'Olá',
     'layout.notifications': 'Notificações',
     'layout.settings': 'Configurações',
     'layout.language': 'Idioma',
-    
+
     // Sidebar
     'sidebar.dashboard': 'Visão Geral',
     'sidebar.truckLoading': 'Carregamento de Caminhão',
@@ -61,7 +61,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.harvest': 'Gestão de Safras',
     'sidebar.users': 'Administração de Usuários',
     'sidebar.systemAdmin': 'Administração do Sistema',
-    
+
     // Users Control
     'users.title': 'Administração de Usuários',
     'users.description': 'Gerencie os usuários da fazenda, altere permissões e níveis de acesso através do kanban.',
@@ -163,14 +163,14 @@ const translations: Record<Language, Record<string, string>> = {
     'common.status': 'Status',
     'common.date': 'Date',
     'common.actions': 'Actions',
-    
+
     // Layout
     'layout.appName': 'Imperial Farm',
     'layout.hello': 'Hello',
     'layout.notifications': 'Notifications',
     'layout.settings': 'Settings',
     'layout.language': 'Language',
-    
+
     // Sidebar
     'sidebar.dashboard': 'Dashboard',
     'sidebar.truckLoading': 'Truck Loading',
@@ -184,7 +184,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.harvest': 'Harvest Management',
     'sidebar.users': 'User Administration',
     'sidebar.systemAdmin': 'System Administration',
-    
+
     // Users Control
     'users.title': 'User Administration',
     'users.description': 'Manage farm users, change permissions and access levels through the kanban board.',
@@ -267,7 +267,7 @@ const translations: Record<Language, Record<string, string>> = {
 export function LanguageProvider({ children }: LanguageProviderProps) {
   const [language, setLanguageState] = useState<Language>(() => {
     // Verificar localStorage ou usar idioma do navegador
-    const saved = localStorage.getItem('fazenda-imperial-language') as Language
+    const saved = localStorage.getItem('integra-rural-language') as Language
     if (saved && (saved === 'pt-BR' || saved === 'en-US')) {
       return saved
     }
@@ -277,7 +277,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   })
 
   useEffect(() => {
-    localStorage.setItem('fazenda-imperial-language', language)
+    localStorage.setItem('integra-rural-language', language)
   }, [language])
 
   const setLanguage = (lang: Language) => {

@@ -30,6 +30,7 @@ def create_group(
         id=db_group.id,
         owner_id=db_group.owner_id,
         name=db_group.name,
+        focus_nfe_token=db_group.focus_nfe_token,
         created_at=db_group.created_at,
     )
 
@@ -52,11 +53,15 @@ def create_group_with_owner_farm(
             farm_name=payload.farm.name if payload.farm else None,
             farm_certificate_a1=payload.farm.certificate_a1 if payload.farm else None,
             farm_modules=payload.farm.modules if payload.farm else None,
+            # Novos Campos
+            focus_nfe_token=payload.group.focus_nfe_token, 
+            farm_nfe_data=payload.farm.dict(exclude={'name', 'certificate_a1', 'modules'}) if payload.farm else None
         )
         return GroupRead(
             id=db_group.id,
             owner_id=db_group.owner_id,
             name=db_group.name,
+            focus_nfe_token=db_group.focus_nfe_token,
             created_at=db_group.created_at,
         )
     except ValueError as e:
@@ -79,6 +84,17 @@ def get_groups(
                     name=farm.name,
                     certificate_a1=farm.certificate_a1,
                     modules=farm.modules,
+                    # Fiscal
+                    cnpj=farm.cnpj,
+                    inscricao_estadual=farm.inscricao_estadual,
+                    regime_tributario=farm.regime_tributario,
+                    telefone=farm.telefone,
+                    cep=farm.cep,
+                    logradouro=farm.logradouro,
+                    numero=farm.numero,
+                    bairro=farm.bairro,
+                    municipio=farm.municipio,
+                    uf=farm.uf,
                     created_at=farm.created_at,
                 )
                 for farm in group.farms
@@ -98,7 +114,9 @@ def get_groups(
                 GroupWithFarms(
                     id=group.id,
                     owner_id=group.owner_id,
+
                     name=group.name,
+                    focus_nfe_token=group.focus_nfe_token,
                     created_at=group.created_at,
                     farms=farms,
                     owner=owner,
@@ -114,9 +132,13 @@ def get_groups(
 def get_group(
     group_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_system_admin),
+    current_user: User = Depends(get_current_active_user),
 ) -> GroupWithFarms:
-    """Obter um grupo específico com suas fazendas e owner (apenas system_admin)"""
+    """Obter um grupo específico com suas fazendas e owner (usuário do grupo ou admin)"""
+    # Se não for admin, verificar se o usuário pertence ao grupo solicitado
+    if current_user.base_role != 'system_admin' and current_user.group_id != group_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Not authorized so access this group')
+
     db_group = group_crud.get(db, group_id=group_id, include_farms=True, include_owner=True)
     if not db_group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Group not found')
@@ -128,6 +150,17 @@ def get_group(
             name=farm.name,
             certificate_a1=farm.certificate_a1,
             modules=farm.modules,
+            # Fiscal
+            cnpj=farm.cnpj,
+            inscricao_estadual=farm.inscricao_estadual,
+            regime_tributario=farm.regime_tributario,
+            telefone=farm.telefone,
+            cep=farm.cep,
+            logradouro=farm.logradouro,
+            numero=farm.numero,
+            bairro=farm.bairro,
+            municipio=farm.municipio,
+            uf=farm.uf,
             created_at=farm.created_at,
         )
         for farm in db_group.farms
@@ -147,6 +180,7 @@ def get_group(
         id=db_group.id,
         owner_id=db_group.owner_id,
         name=db_group.name,
+        focus_nfe_token=db_group.focus_nfe_token,
         created_at=db_group.created_at,
         farms=farms,
         owner=owner,
@@ -171,6 +205,7 @@ def update_group(
         id=db_group.id,
         owner_id=db_group.owner_id,
         name=db_group.name,
+        focus_nfe_token=db_group.focus_nfe_token,
         created_at=db_group.created_at,
     )
 
@@ -186,6 +221,7 @@ def update_group_full(
     try:
         # Preparar dados para atualização
         group_name = payload.get('group', {}).get('name') if payload.get('group') else None
+        focus_nfe_token = payload.get('group', {}).get('focus_nfe_token') if payload.get('group') else None
         owner_data = payload.get('owner')
         farms_data = payload.get('farms')
 
@@ -198,6 +234,18 @@ def update_group_full(
                     'name': farm.get('name'),
                     'certificate_a1': farm.get('certificate_a1'),
                     'modules': farm.get('modules'),
+                    # Campos Fiscais / NFe
+                    'cnpj': farm.get('cnpj'),
+                    'inscricao_estadual': farm.get('inscricao_estadual'),
+                    'regime_tributario': farm.get('regime_tributario'),
+                    'telefone': farm.get('telefone'),
+                    # Endereço
+                    'cep': farm.get('cep'),
+                    'logradouro': farm.get('logradouro'),
+                    'numero': farm.get('numero'),
+                    'bairro': farm.get('bairro'),
+                    'municipio': farm.get('municipio'),
+                    'uf': farm.get('uf'),
                 }
                 for farm in farms_data
             ]
@@ -206,6 +254,7 @@ def update_group_full(
             db,
             group_id=group_id,
             group_name=group_name,
+            focus_nfe_token=focus_nfe_token,
             owner_name=owner_data.get('name') if owner_data else None,
             owner_cpf=owner_data.get('cpf') if owner_data else None,
             owner_email=owner_data.get('email') if owner_data else None,
@@ -220,6 +269,17 @@ def update_group_full(
                 name=farm.name,
                 certificate_a1=farm.certificate_a1,
                 modules=farm.modules,
+                # Fiscal
+                cnpj=farm.cnpj,
+                inscricao_estadual=farm.inscricao_estadual,
+                regime_tributario=farm.regime_tributario,
+                telefone=farm.telefone,
+                cep=farm.cep,
+                logradouro=farm.logradouro,
+                numero=farm.numero,
+                bairro=farm.bairro,
+                municipio=farm.municipio,
+                uf=farm.uf,
                 created_at=farm.created_at,
             )
             for farm in db_group.farms
@@ -229,6 +289,7 @@ def update_group_full(
             id=db_group.id,
             owner_id=db_group.owner_id,
             name=db_group.name,
+            focus_nfe_token=db_group.focus_nfe_token,
             created_at=db_group.created_at,
             farms=farms,
         )

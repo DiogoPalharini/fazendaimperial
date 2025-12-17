@@ -4,7 +4,7 @@ import { DEFAULT_ENABLED_MODULES } from './modules'
 export const MOCK_FARMS: Farm[] = [
   {
     id: 'farm-imp-001',
-    name: 'Fazenda Imperial',
+    name: 'Integra Rural',
     code: 'IMP-001',
     cityState: 'Sorriso • MT',
     hectares: 1250,
