@@ -1,18 +1,27 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Filter } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateTime, formatNumber } from './utils'
 import { carregamentosService } from '../../../services/carregamentos'
 import '../FeaturePage.css'
 import './TruckLoading.css'
 
+
 export default function TruckLoading() {
   const navigate = useNavigate()
+  const { hasModulePermission } = useAuth()
+
   const [searchQuery, setSearchQuery] = useState('')
   const [filterTruck, setFilterTruck] = useState('')
   const [filterFarm, setFilterFarm] = useState('')
   const [filterDestination, setFilterDestination] = useState('')
+
+  // Default to true if user has specialized scale permission
+  const [filterPendingWeight, setFilterPendingWeight] = useState(() => {
+    return hasModulePermission('truck-loading', 'manage_weight')
+  })
 
   // Fetch Carregamentos
   const { data: carregamentos = [], isLoading: loading } = useQuery({
@@ -51,9 +60,12 @@ export default function TruckLoading() {
       const matchesFarm = !filterFarm || c.farm === filterFarm
       const matchesDestination = !filterDestination || c.destination === filterDestination
 
-      return matchesSearch && matchesTruck && matchesFarm && matchesDestination
+      // Scale Operator Filter: Show only if Net Weight is 0 or null
+      const matchesWeight = !filterPendingWeight || (!c.peso_liquido_kg || c.peso_liquido_kg === 0)
+
+      return matchesSearch && matchesTruck && matchesFarm && matchesDestination && matchesWeight
     })
-  }, [carregamentos, searchQuery, filterTruck, filterFarm, filterDestination])
+  }, [carregamentos, searchQuery, filterTruck, filterFarm, filterDestination, filterPendingWeight])
 
 
 
@@ -94,6 +106,31 @@ export default function TruckLoading() {
         </div>
 
         <div className="filters-group">
+          {/* Toggle for Pending Weight */}
+          <button
+            className={`filter-toggle ${filterPendingWeight ? 'active' : ''}`}
+            onClick={() => setFilterPendingWeight(!filterPendingWeight)}
+            title={filterPendingWeight ? "Mostrando apenas pendentes de pesagem" : "Gatilho de pesagem desativado"}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0 12px',
+              height: '42px',
+              border: filterPendingWeight ? '1px solid #10b981' : '1px solid #d1d5db',
+              backgroundColor: filterPendingWeight ? '#ecfdf5' : 'white',
+              color: filterPendingWeight ? '#047857' : '#374151',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '0.9rem',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Filter size={18} />
+            <span>Pendente Pesagem</span>
+          </button>
+
           <div className="select-group">
             <label className="select-label">Caminhão:</label>
             <select
@@ -145,10 +182,12 @@ export default function TruckLoading() {
       </div>
 
       <div className="loading-actions">
-        <button type="button" className="add-button" onClick={() => navigate('/carregamento/novo')}>
-          <Plus size={20} />
-          Adicionar Carregamento
-        </button>
+        {hasModulePermission('truck-loading', 'create') && (
+          <button type="button" className="add-button" onClick={() => navigate('/carregamento/novo')}>
+            <Plus size={20} />
+            Adicionar Carregamento
+          </button>
+        )}
       </div>
 
       <div className="table-wrapper">
@@ -164,6 +203,7 @@ export default function TruckLoading() {
                 <th>Caminhão</th>
                 <th>Motorista</th>
                 <th>Fazenda</th>
+                <th>Destino</th>
                 <th>Talhão</th>
                 <th>Produto</th>
                 <th>Peso Est. (kg)</th>
@@ -193,6 +233,7 @@ export default function TruckLoading() {
                     <td>{carregamento.truck}</td>
                     <td>{carregamento.driver}</td>
                     <td>{carregamento.farm}</td>
+                    <td>{carregamento.destination}</td>
                     <td>{carregamento.field}</td>
                     <td>{carregamento.product}</td>
                     <td>{formatNumber(carregamento.peso_estimado_kg)}</td>

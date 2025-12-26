@@ -28,7 +28,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     except JWTError as exc:
         raise credentials_exception from exc
 
-    user = user_crud.get(db, user_id=subject)
+    user = user_crud.get(db, id=subject)
     if not user:
         raise credentials_exception
     return user
@@ -44,6 +44,3 @@ def get_current_system_admin(current_user: User = Depends(get_current_active_use
     if current_user.base_role != BaseRole.SYSTEM_ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Insufficient permissions')
     return current_user
-
-
-

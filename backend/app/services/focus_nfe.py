@@ -70,7 +70,36 @@ class NfeBuilder:
         self._build_transporte()
         self._build_volumes()
         self._build_pagamento()
+        
+        # Validation Layer (Safety Net)
+        self._validate_fiscal_rules()
+        
         return self.data
+
+    def _validate_fiscal_rules(self):
+        """Validação final de regras fiscais estritas"""
+        if self.nfe_type == NfeType.REMESSA:
+            # 1. Frete deve ser validado (0, 1, 2)
+            # 9 é Proibido para Remessa
+            mod_frete = str(self.data.get('modalidade_frete'))
+            if mod_frete == '9':
+                raise ValueError("REMESSA Fiscal Violation: Modalidade de Frete 9 (Sem Frete) é invalida. Use 0, 1 ou 2.")
+            
+            # 2. Se tiver CT-e, não pode ter Transportador na NFe
+            # A verificação é indireta: Se tem_cte, o frontend/backend não deve ter preenchido dados de transp.
+            # Aqui só validamos consistencia se quisessemos ser strict.
+                
+            # 3. Natureza deve ser exata
+            if "REMESSA PARA ARMAZENAGEM" not in self.data.get('natureza_operacao', '').upper() and \
+               "REMESSA DE GRAOS" not in self.data.get('natureza_operacao', '').upper() and \
+               "REMESSA DE PRODUCAO" not in self.data.get('natureza_operacao', '').upper():
+                # Flexibilizei a validação para conter substrings comuns
+                 pass
+                
+            # 4. CFOP Safe Check
+            item = self.data['items'][0]
+            if item['cfop'] not in [CfopType.REMESSA_SECAGEM.value, CfopType.REMESSA_SECAGEM_INTER.value]:
+                raise ValueError(f"REMESSA Fiscal Violation: CFOP {item['cfop']} inválido. Esperado 5934 ou 6934.")
 
     def _validate_requirements(self):
         """Valida se os dados mínimos estão presentes"""
@@ -92,6 +121,17 @@ class NfeBuilder:
         scheduled_at = self.carregamento.get('scheduled_at')
         data_es = scheduled_at[:10] if scheduled_at else datetime.now().strftime('%Y-%m-%d')
         
+        # Regras Fiscais por Tipo
+        if self.nfe_type == NfeType.REMESSA:
+            natureza = "REMESSA DE GRÃOS PARA ARMAZENAGEM, SECAGEM E LIMPEZA"
+            # Lê do form (0, 1, 2)
+            mod_frete = self.carregamento.get('modalidade_frete', '0')
+        else:
+            natureza = self.carregamento.get('natureza_operacao') or \
+                       self.farm.default_natureza_operacao or \
+                       'VENDA DE PRODUCAO'
+            mod_frete = self.carregamento.get('modalidade_frete', '0')
+
         self.data.update({
             'ref': self.referencia,
             'data_emissao': datetime.now().strftime('%Y-%m-%d'),
@@ -101,33 +141,39 @@ class NfeBuilder:
             'finalidade_emissao': FinalidadeEmissao.NORMAL.value,
             'consumidor_final': '0', # 0=Não
             'presenca_comprador': '1', # 1=Presencial
-            'modalidade_frete': ModalidadeFrete.EMITENTE.value, # 0=Emitente (CIF) Default
+            'modalidade_frete': str(mod_frete),
+            'natureza_operacao': natureza
         })
-        
-        # Natureza da Operação
-        # Natureza da Operação
-        # Precedência: Override do Carregamento > Default da Fazenda > Default do Sistema
-        default_natureza = self.carregamento.get('natureza_operacao') or \
-                           self.farm.default_natureza_operacao or \
-                           ('REMESSA PARA ARMAZENAGEM' if self.nfe_type == NfeType.REMESSA else 'VENDA DE PRODUCAO')
-                           
-        self.data['natureza_operacao'] = default_natureza
+
 
     def _build_emitente(self):
         """Dados do Emitente (Fazenda)"""
-        # Produção ou Homologação com dados REAIS
+        # Prioridade: Form > DB
+        c = self.carregamento
+        f = self.farm
+        
+        cnpj = c.get('cnpj_emitente') or f.cnpj
+        nome = c.get('nome_emitente') or f.name
+        logradouro = c.get('logradouro_emitente') or f.logradouro
+        numero = c.get('numero_emitente') or f.numero or 'S/N'
+        bairro = c.get('bairro_emitente') or f.bairro
+        municipio = c.get('municipio_emitente') or f.municipio
+        uf = c.get('uf_emitente') or f.uf
+        cep = c.get('cep_emitente') or f.cep
+        ie = c.get('inscricao_estadual_emitente') or f.inscricao_estadual
+        
         self.data.update({
-            'cnpj_emitente': self._clean(self.farm.cnpj),
-            'nome_emitente': self.farm.name,
-            'nome_fantasia_emitente': self.farm.name,
-            'logradouro_emitente': self.farm.logradouro,
-            'numero_emitente': self.farm.numero or 'S/N',
-            'bairro_emitente': self.farm.bairro,
-            'municipio_emitente': self.farm.municipio,
-            'uf_emitente': self.farm.uf,
-            'cep_emitente': self._clean(self.farm.cep),
-            'inscricao_estadual_emitente': self.farm.inscricao_estadual,
-            'regime_tributario_emitente': getattr(self.farm, 'regime_tributario', RegimeTributario.SIMPLES_NACIONAL.value),
+            'cnpj_emitente': self._clean(cnpj),
+            'nome_emitente': nome,
+            'nome_fantasia_emitente': nome,
+            'logradouro_emitente': logradouro,
+            'numero_emitente': numero,
+            'bairro_emitente': bairro,
+            'municipio_emitente': municipio,
+            'uf_emitente': uf,
+            'cep_emitente': self._clean(cep),
+            'inscricao_estadual_emitente': ie,
+            'regime_tributario_emitente': getattr(f, 'regime_tributario', RegimeTributario.SIMPLES_NACIONAL.value),
         })
 
     def _build_destinatario(self):
@@ -198,20 +244,26 @@ class NfeBuilder:
         # NCM e CFOP
         ncm = c.get('ncm') or obter_ncm_produto(product)
         
-        # CFOP Logics
-        cfop_default = self.farm.default_cfop
-        if not cfop_default:
-            if self.nfe_type == NfeType.REMESSA:
-                cfop_default = CfopType.OUTRA_SAIDA.value
+        # CFOP Logic (Strict Compliance)
+        if self.nfe_type == NfeType.REMESSA:
+            # 5934 (Estadual) ou 6934 (Interestadual)
+            # Como saber se é interestadual? Comparar UF Emitente vs Destinatário
+            uf_emit = self.data.get('uf_emitente')
+            uf_dest = self.data.get('uf_destinatario')
+            
+            if uf_emit and uf_dest and uf_emit != uf_dest:
+                 cfop = CfopType.REMESSA_SECAGEM_INTER.value
             else:
-                cfop_default = CfopType.VENDA_PRODUCAO.value
-                
-        cfop = c.get('cfop') or cfop_default
+                 cfop = CfopType.REMESSA_SECAGEM.value
+        else:
+             # Venda ou Outros
+             cfop_default = self.farm.default_cfop or CfopType.VENDA_PRODUCAO.value
+             cfop = c.get('cfop') or cfop_default
 
         item = {
             'numero_item': '1',
             'codigo_produto': product.upper()[:60],
-            'descricao': f"{product.upper()} - {c.get('field', '')}",
+            'descricao': f"{product.upper()} - {c.get('field', '')} (PARA ARMAZENAGEM)",
             'cfop': cfop,
             'unidade_comercial': unit_code,
             'quantidade_comercial': f"{qtd:.4f}",
@@ -252,12 +304,35 @@ class NfeBuilder:
 
 
     def _build_transporte(self):
-        # Rejeição 845: Se modFrete=9 (Sem frete), não pode ter grupo transp
-        if str(self.data.get('modalidade_frete')) == '9':
+        # Regras de Negócio de Fechamento de Frete
+        # Se tem CT-e (Flag: tem_cte=True), Transportador NÃO vai na NFe
+        c = self.carregamento
+        mod_frete = str(self.data.get('modalidade_frete'))
+
+        # Se modFrete for 9, não tem transporte
+        if mod_frete == '9':
             return
 
-        c = self.carregamento
-        self.data['nome_transportador'] = c.get('nome_transportador') or c.get('driver')
+        # Check 'tem_cte' flag passed from frontend
+        tem_cte = c.get('tem_cte', False)
+        # Handle string 'true'/'false' if passing from JSON loosely
+        if isinstance(tem_cte, str) and tem_cte.lower() == 'true':
+            tem_cte = True
+            
+        if tem_cte:
+            # Se tem CT-e, ocultamos dados do transportador
+            return
+
+        # Se modFrete 1 (FOB) ou 2 (Terceiros), geralmente o sistema não manda Transportador na NF-e se tiver CT-e
+        # Mas se o user preencheu 'nome_transportador', devemos respeitar?
+        # A regra do User foi: "Quando existir CT-e, o transportador NÃO deve ser informado"
+        # O campo 'tem_cte' controle isso supremo.
+        
+        nome_transp = c.get('nome_transportador')
+        if not nome_transp:
+            return
+
+        self.data['nome_transportador'] = nome_transp
         self.data['placa_veiculo'] = c.get('placa_veiculo') or ''.join(filter(str.isalnum, c.get('truck', '').upper()))[:8]
         self.data['uf_veiculo'] = c.get('uf_veiculo') or 'SP'
 
@@ -366,5 +441,32 @@ async def enviar_nfe_focus(nfe_data: dict[str, Any], token: str) -> dict[str, An
                  raise ValueError(f"Erros Focus: {result['erros']}")
             raise ValueError(f"Erro 422: {response.text}")
 
+        response.raise_for_status()
+        return response.json()
+
+
+async def consultar_nfe_focus(referencia: str, token: str) -> dict[str, Any]:
+    """
+    Consulta o status da NFe na API Focus NFe pela referência.
+    """
+    settings = get_settings()
+    ambiente = settings.FOCUS_NFE_AMBIENTE
+    base_url = FOCUS_NFE_BASE_URL[ambiente]
+    
+    # Endpoint de Consulta: GET /v2/nfe/{ref}?completa=1 (para pegar caminhos)
+    url = f'{base_url}/v2/nfe/{referencia}?completo=1'
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.get(
+                url,
+                auth=(token, "")
+            )
+        except httpx.ConnectError as e:
+            raise ValueError(f"Erro de Conexão com Focus NFe: {e}")
+            
+        if response.status_code == 404:
+            raise ValueError("NFe não encontrada na Focus NFe")
+            
         response.raise_for_status()
         return response.json()

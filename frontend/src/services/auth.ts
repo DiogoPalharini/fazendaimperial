@@ -32,8 +32,8 @@ export const authService = {
     return response.data
   },
 
-  async getAllowedModules(): Promise<string[]> {
-    const response = await api.get<string[]>('/auth/me/modules')
+  async getAllowedModules(): Promise<Record<string, any>> { // Using Record<string, any> temporarily to avoid type errors until full migration
+    const response = await api.get('/auth/me/modules')
     return response.data
   },
 }

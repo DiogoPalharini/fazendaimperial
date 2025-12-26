@@ -89,14 +89,16 @@ class CRUDCarregamento:
             db.flush()
         return db_obj
 
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> Sequence[Carregamento]:
-        """Lista todos os carregamentos"""
-        return db.execute(
-            select(Carregamento)
-            .order_by(Carregamento.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-        ).scalars().all()
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100, farm_names: list[str] | None = None) -> Sequence[Carregamento]:
+        """Lista todos os carregamentos, opcionalmente filtrando por lista de nomes de fazendas"""
+        stmt = select(Carregamento).order_by(Carregamento.created_at.desc())
+        
+        if farm_names is not None:
+             stmt = stmt.where(Carregamento.farm.in_(farm_names))
+             
+        stmt = stmt.offset(skip).limit(limit)
+        
+        return db.execute(stmt).scalars().all()
 
 
 carregamento = CRUDCarregamento()

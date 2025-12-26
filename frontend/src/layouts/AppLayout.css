@@ -1,25 +1,30 @@
-:root{
+:root {
   --background: #F8F5ED;
   --green: #3A7D44;
   --green-secondary: #6B9E4B;
   --brown: #4A3F35;
 }
 
-.layout { 
-  min-height: 100vh; 
+.layout {
+  min-height: 100vh;
   display: flex;
-  background: var(--background); 
-  transition: all 220ms ease; 
+  background: var(--background);
+  transition: all 220ms ease;
 }
 
 .content {
   flex: 1;
   padding: 26px 32px 44px;
   width: 100%;
-  max-width: 1240px;
+  max-width: 100%;
+  /* Changed from 1240px to allow full width */
+  min-width: 0;
+  /* Crucial for flex child scrolling */
   margin: 0 auto;
   margin-left: 260px;
   transition: margin-left 220ms ease, padding 180ms ease;
+  overflow-x: hidden;
+  /* Prevent page-level scroll, force container scroll */
 }
 
 .layout[data-sidebar-open='false'] .content {
@@ -31,16 +36,66 @@
     margin-left: 0;
   }
 }
-.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.header-left { display: flex; align-items: center; gap: 10px; }
-.header-right { display: flex; align-items: center; gap: 10px; }
-.page-title { color: var(--brown); margin: 0; font-size: 1.2rem; }
-.icon-button { background: transparent; border: 1px solid #e5e0d1; padding: 8px 10px; border-radius: 10px; cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
-.icon-button:hover { background: #fff; }
-.icon-button:active { transform: scale(0.97); }
-.icon-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.user-chip { background: #fff; border: 1px solid #e5e0d1; padding: 8px 12px; border-radius: 999px; }
-.user-name { color: var(--brown); font-weight: 600; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-title {
+  color: var(--brown);
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.icon-button {
+  background: transparent;
+  border: 1px solid #e5e0d1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.icon-button:hover {
+  background: #fff;
+}
+
+.icon-button:active {
+  transform: scale(0.97);
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.user-chip {
+  background: #fff;
+  border: 1px solid #e5e0d1;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.user-name {
+  color: var(--brown);
+  font-weight: 600;
+}
 
 .menu-toggle {
   display: none;
@@ -54,10 +109,18 @@
   transition: background 160ms ease, transform 160ms ease;
 }
 
-.menu-toggle:hover { background: #fff; }
-.menu-toggle:active { transform: scale(0.96); }
+.menu-toggle:hover {
+  background: #fff;
+}
 
-.menu-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.menu-toggle:active {
+  transform: scale(0.96);
+}
+
+.menu-toggle:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 
 .layout[data-sidebar-open='false'] .menu-toggle {
   display: inline-flex;
@@ -74,16 +137,30 @@
   z-index: 12;
 }
 
-.sidebar-backdrop.is-visible { opacity: 1; pointer-events: auto; }
+.sidebar-backdrop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 @media (max-width: 960px) {
-  .menu-toggle { display: inline-flex; }
-  .content { padding: 22px 24px 36px; }
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .content {
+    padding: 22px 24px 36px;
+  }
 }
 
 @media (max-width: 720px) {
-  .sidebar-backdrop { display: block; }
-  .content { padding: 18px 14px 28px; }
+  .sidebar-backdrop {
+    display: block;
+  }
+
+  .content {
+    padding: 18px 14px 28px;
+  }
+
   .header {
     position: sticky;
     top: 0;
@@ -92,12 +169,20 @@
     z-index: 10;
     border-bottom: 1px solid #e5e0d1;
   }
-  .header-left { width: 100%; justify-content: space-between; }
-  .header-right { width: 100%; justify-content: flex-end; }
+
+  .header-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 @media (min-width: 721px) {
-  .sidebar-backdrop { display: none; }
+  .sidebar-backdrop {
+    display: none;
+  }
 }
-
-

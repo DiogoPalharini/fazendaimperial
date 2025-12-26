@@ -23,6 +23,17 @@ export const carregamentosService = {
   async getDistinctValues(field: string): Promise<string[]> {
     const response = await api.get<string[]>('/carregamentos/distinct-values', { params: { field } })
     return response.data
+  },
+  async syncNFe(id: number): Promise<CarregamentoResponse> {
+    const response = await api.post<CarregamentoResponse>(`/carregamentos/${id}/sync-nfe`)
+    return response.data
+  },
+  getDownloadUrl(id: number): string {
+    return `${api.defaults.baseURL}/carregamentos/${id}/pdf`
+  },
+  async downloadPDF(id: number): Promise<Blob> {
+    const response = await api.get(`/carregamentos/${id}/pdf`, { responseType: 'blob' })
+    return response.data
   }
 }
 

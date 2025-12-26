@@ -1,8 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from '../contexts/LanguageContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../contexts/AuthContext'
+import { groupsService } from '../services/groups'
+import PremiumModal from './ui/PremiumModal'
 import './Sidebar.css'
 import logo from '../assets/icon.png'
 import {
@@ -22,10 +24,10 @@ import {
   Users,
   FlaskConical,
   ShieldCheck,
-  X,
   Sun,
   Moon,
   LogOut,
+  Building2,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -66,37 +68,62 @@ const menuItems: MenuItem[] = [
   { key: 'meteorologia', path: '/meteorologia', translationKey: 'sidebar.meteorology', Icon: Cloud },
   { key: 'solo', path: '/solo', translationKey: 'sidebar.soil', Icon: FlaskConical },
   { key: 'safra', path: '/safra', translationKey: 'sidebar.harvest', Icon: Sprout },
+  { key: 'armazens', path: '/armazens', translationKey: 'sidebar.warehouses', Icon: Building2 },
+  { key: 'armazens', path: '/armazens', translationKey: 'sidebar.warehouses', Icon: Building2 },
+  { key: 'farms', path: '/fazendas', translationKey: 'Fazendas', Icon: Sprout }, // Using Sprout or maybe MapPin? Sprout is used for Safra. Let's use MapPin or sticky note? Building2 is Armazen.
   { key: 'users', path: '/usuarios', translationKey: 'sidebar.users', Icon: Users },
 ]
 
 // Mapear keys dos menu items para keys de módulos
 const moduleKeyMap: Record<string, string> = {
   'dashboard': 'dashboard',
-  'truck-loading': 'carregamento',
-  'invoice': 'nota-fiscal',
-  'machines': 'maquinas',
-  'inputs': 'insumos',
-  'finance': 'financeiro',
-  'activities': 'atividades',
-  'meteorologia': 'meteorologia',
-  'solo': 'solo',
-  'safra': 'safra',
-  'users': 'usuarios',
+  'truck-loading': 'truck-loading',
+  'invoice': 'invoice',
+  'machines': 'machines',
+  'inputs': 'inputs',
+  'finance': 'finance',
+  'activities': 'activities',
+  'meteorologia': 'weather',
+  'solo': 'soil',
+  'safra': 'harvest',
+  'users': 'users',
 }
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const t = useTranslation()
   const { theme, setTheme } = useTheme()
-  const { user, logout, allowedModules } = useAuth()
+  const { user, logout, allowedModules, hasModulePermission } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+
+  // Settings Modal State
+  const [settingsModalOpen, setSettingsModal] = useState(false)
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({})
+
+  // Farm Management State
+  const [userFarms, setUserFarms] = useState<any[]>([])
+  const [loadingFarms, setLoadingFarms] = useState(false)
+
   const isActive = (path: string) => location.pathname === path
 
   const toggleSubmenu = (key: string) => {
     setOpenSubmenus(prev => ({ ...prev, [key]: !prev[key] }))
   }
+
+  // Fetch Farms when Settings Modal opens
+  useEffect(() => {
+    if (settingsModalOpen && user?.group_id) {
+      setLoadingFarms(true)
+      groupsService.getGroup(user.group_id)
+        .then(group => {
+          if (group.farms) {
+            setUserFarms(group.farms)
+          }
+        })
+        .catch(err => console.error("Error loading user farms:", err))
+        .finally(() => setLoadingFarms(false))
+    }
+  }, [settingsModalOpen, user?.group_id])
 
   const ToggleIcon = isOpen ? ChevronLeft : ChevronRight
 
@@ -112,14 +139,57 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     // Para owner e outros roles, filtrar pelos módulos permitidos
     // Dashboard sempre deve aparecer
     if (allowedModules.length > 0) {
-      return menuItems.filter(item => {
-        if (item.key === 'system-admin') return false
-        // Dashboard sempre visível
-        if (item.key === 'dashboard') return true
+      return menuItems.reduce<MenuItem[]>((acc, item) => {
+        if (item.key === 'system-admin') return acc
+
+        // Dashboard principal sempre visível
+        if (item.key === 'dashboard') {
+          acc.push(item)
+          return acc
+        }
+
+        // Logic specific for Truck Loading (has children and granularity)
+        if (item.key === 'truck-loading') {
+          const hasDashboard = hasModulePermission('truck-loading', 'dashboard')
+          const hasList = hasModulePermission('truck-loading', 'read') ||
+            hasModulePermission('truck-loading', 'manage_weight') ||
+            hasModulePermission('truck-loading', 'manage_quality')
+
+          const visibleChildren = []
+          if (hasDashboard) {
+            visibleChildren.push({ key: 'truck-loading-dashboard', path: '/carregamento/dashboard', label: 'Dashboard' })
+          }
+          if (hasList) {
+            visibleChildren.push({ key: 'truck-loading-list', path: '/carregamento', label: 'Gerenciar Cargas' })
+          }
+
+          if (visibleChildren.length > 0) {
+            acc.push({ ...item, children: visibleChildren })
+          }
+          return acc
+        }
+
+        // Verificar children se existirem (genérico para outros itens)
+        if (item.children) {
+          const visibleChildren = item.children.filter(child => {
+            const childModuleKey = moduleKeyMap[child.key]
+            return childModuleKey ? allowedModules.includes(childModuleKey) : false
+          })
+
+          if (visibleChildren.length > 0) {
+            acc.push({ ...item, children: visibleChildren })
+          }
+          return acc
+        }
+
         const moduleKey = moduleKeyMap[item.key]
         // Se o módulo estiver mapeado, verificar se está na lista de permitidos
-        return moduleKey ? allowedModules.includes(moduleKey) : false
-      })
+        if (moduleKey && allowedModules.includes(moduleKey)) {
+          acc.push(item)
+        }
+
+        return acc
+      }, [])
     }
 
     // Se não tem módulos permitidos, mostrar apenas dashboard
@@ -212,7 +282,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             title={t('layout.settings')}
             aria-label={t('layout.settings')}
             type="button"
-            onClick={() => setSettingsModalOpen(true)}
+            onClick={() => setSettingsModal(true)}
           >
             <Settings size={22} />
             {isOpen && <span className="settings-label">Configurações</span>}
@@ -230,66 +300,88 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         </div>
       </aside>
 
-      {settingsModalOpen && (
-        <div className="settings-modal" role="dialog" aria-modal="true" onClick={() => setSettingsModalOpen(false)}>
-          <div className="settings-modal__card" onClick={(e) => e.stopPropagation()}>
-            <header>
-              <div>
-                <h3>Configurações</h3>
-                <p>Personalize sua experiência</p>
-              </div>
+      <PremiumModal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModal(false)}
+        title="Configurações"
+        subtitle="Personalize sua experiência"
+        footer={
+          <button
+            type="button"
+            className="premium-btn-primary"
+            onClick={() => setSettingsModal(false)}
+          >
+            Fechar
+          </button>
+        }
+      >
+        {/*
+        <div className="settings-section">
+          <h4>
+            <Settings size={18} />
+            Aparência
+          </h4>
+          <div className="settings-option">
+            <label htmlFor="theme-select">Tema</label>
+            <div className="theme-selector">
               <button
                 type="button"
-                className="close-btn"
-                onClick={() => setSettingsModalOpen(false)}
-                aria-label="Fechar"
+                className={`theme-option ${theme === 'light' ? 'active' : ''}`}
+                onClick={() => setTheme('light')}
               >
-                <X size={20} />
+                <Sun size={18} />
+                <span>Claro</span>
               </button>
-            </header>
-
-            <div className="settings-content">
-              <div className="settings-section">
-                <h4>
-                  <Settings size={18} />
-                  Aparência
-                </h4>
-                <div className="settings-option">
-                  <label htmlFor="theme-select">Tema</label>
-                  <div className="theme-selector">
-                    <button
-                      type="button"
-                      className={`theme-option ${theme === 'light' ? 'active' : ''}`}
-                      onClick={() => setTheme('light')}
-                    >
-                      <Sun size={18} />
-                      <span>Claro</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`theme-option ${theme === 'dark' ? 'active' : ''}`}
-                      onClick={() => setTheme('dark')}
-                    >
-                      <Moon size={18} />
-                      <span>Escuro</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <button
+                type="button"
+                className={`theme-option ${theme === 'dark' ? 'active' : ''}`}
+                onClick={() => setTheme('dark')}
+              >
+                <Moon size={18} />
+                <span>Escuro</span>
+              </button>
             </div>
-
-            <footer>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => setSettingsModalOpen(false)}
-              >
-                Fechar
-              </button>
-            </footer>
           </div>
         </div>
-      )}
+        */}
+
+        {/* Seção Dados da Fazenda */}
+        <div className="settings-section">
+          <h4>
+            <Sprout size={18} />
+            Dados da Fazenda
+          </h4>
+          <div style={{ padding: '0 8px' }}>
+            {loadingFarms ? (
+              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Carregando fazendas...</p>
+            ) : userFarms.length > 0 ? (
+              userFarms.map(farm => (
+                <div key={farm.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  marginBottom: '8px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#334155' }}>{farm.name}</strong>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      {farm.municipio}/{farm.uf}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Nenhuma fazenda encontrada.</p>
+            )}
+          </div>
+        </div>
+      </PremiumModal>
+
+      {/* Modal de Matrículas */}
     </>
   )
 }

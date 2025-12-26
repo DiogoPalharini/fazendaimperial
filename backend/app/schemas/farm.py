@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.base import ORMModel
+from app.schemas.field import FieldRead
 
 
 class FarmBase(ORMModel):
@@ -51,4 +52,5 @@ class FarmCreate(BaseModel):
 
 
 class FarmRead(FarmBase):
-    pass
+    # Include Fields (Default empty list if none)
+    fields: list[FieldRead] = []

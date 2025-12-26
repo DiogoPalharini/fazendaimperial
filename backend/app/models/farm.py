@@ -12,6 +12,7 @@ from app.db.base_class import Base
 if TYPE_CHECKING:
     from app.models.group import Group
     from app.models.user_farm_permissions import UserFarmPermissions
+    from app.models.field import Field
 
 
 class Farm(Base):
@@ -52,6 +53,11 @@ class Farm(Base):
     )
     user_permissions: Mapped[list['UserFarmPermissions']] = relationship(
         'UserFarmPermissions',
+        back_populates='farm',
+        cascade='all, delete-orphan'
+    )
+    fields: Mapped[list['Field']] = relationship(
+        'Field',
         back_populates='farm',
         cascade='all, delete-orphan'
     )

@@ -14,8 +14,10 @@ import ActivitiesControl from './pages/features/ActivitiesControl/index'
 import Meteorologia from './pages/features/Meteorologia/index'
 import SafraControl from './pages/features/SafraControl/index'
 import UsersControl from './pages/features/UsersControl/index'
+import ArmazensPage from './pages/features/Armazens/ArmazensPage'
 import SoloPage from './pages/Solo/SoloPage'
 import SystemAdminPage from './pages/SystemAdmin/SystemAdminPage'
+import FarmManagement from './pages/features/FarmManagement/FarmManagement'
 import HomeRedirect from './components/HomeRedirect'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -43,7 +45,10 @@ export default function App() {
             <Route path="/meteorologia" element={<Meteorologia />} />
             <Route path="/solo" element={<SoloPage />} />
             <Route path="/safra" element={<SafraControl />} />
+            <Route path="/safra" element={<SafraControl />} />
+            <Route path="/armazens" element={<ArmazensPage />} />
             <Route path="/usuarios" element={<UsersControl />} />
+            <Route path="/fazendas" element={<FarmManagement />} />
             <Route path="/admin/sistema" element={<SystemAdminPage />} />
           </Route>
           <Route path="*" element={<HomeRedirect />} />

@@ -11,13 +11,13 @@ from app.schemas.user import UserCreate
 
 
 class CRUDUser:
-    def get(self, db: Session, *, user_id: int | str) -> User | None:
-        if isinstance(user_id, str):
+    def get(self, db: Session, id: int | str) -> User | None:
+        if isinstance(id, str):
             try:
-                user_id = int(user_id)
+                id = int(id)
             except ValueError:
                 return None
-        return db.get(User, user_id)
+        return db.get(User, id)
 
     def get_by_email(self, db: Session, *, email: str) -> User | None:
         return db.query(User).filter(User.email == email.lower()).first()
@@ -32,7 +32,9 @@ class CRUDUser:
             base_role=obj_in.base_role,
         )
         db.add(db_user)
-        db.flush()
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
         return db_user
 
     def authenticate(self, db: Session, *, email: str, password: str) -> Optional[User]:

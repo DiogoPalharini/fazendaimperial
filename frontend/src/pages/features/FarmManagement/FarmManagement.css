@@ -1,0 +1,33 @@
+/* 
+   FarmManagement Specific Overrides
+   Crucial to disable the 1500px min-width from TruckLoading.css
+*/
+
+.loading-page .table-wrapper .farm-table-custom {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: auto !important;
+}
+
+.loading-page .table-wrapper .farm-table-custom th,
+.loading-page .table-wrapper .farm-table-custom td {
+    white-space: normal !important;
+    padding: 12px 16px;
+}
+
+/* Ensure no horizontal scroll on the wrapper itself if not needed */
+.loading-page .table-wrapper {
+    overflow-x: hidden;
+}
+
+/* If screen is very small, allow scroll */
+@media (max-width: 768px) {
+    .loading-page .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .loading-page .table-wrapper .farm-table-custom {
+        min-width: 600px !important;
+        /* Minimal readable width on mobile */
+    }
+}

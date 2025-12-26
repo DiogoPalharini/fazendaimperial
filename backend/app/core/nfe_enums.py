@@ -11,6 +11,8 @@ class CfopType(str, Enum):
     REMESSA_CONSIGNACAO = '5917'
     REMESSA_DEPOSITO = '5905'
     REMESSA_ARMAZEM = '5906'
+    REMESSA_SECAGEM = '5934' # Remessa para Armazenagem e Secagem (Estadual)
+    REMESSA_SECAGEM_INTER = '6934' # Remessa para Armazenagem e Secagem (Interestadual)
     OUTRA_SAIDA = '5949'
     
     # Venda

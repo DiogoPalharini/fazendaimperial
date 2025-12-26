@@ -1,356 +1,232 @@
-import { useMemo, useState } from 'react'
-import {
-  Plus,
-  Search,
-  Filter,
-  User as UserIcon,
-  Wrench,
-  DollarSign,
-  Briefcase,
-  Shield,
-  UserX,
-  Eye,
-} from 'lucide-react'
-import { useTranslation } from '../../../contexts/LanguageContext'
-import AddUserModal from './components/AddUserModal'
-import UserDetailsModal from './components/UserDetailsModal'
-import type { User as UserType, UserRole } from './types'
-import { INITIAL_USERS, USER_ROLES, SETORES, FAZENDAS } from './constants'
-import '../FeaturePage.css'
-import './UsersControl.css'
-
-const KANBAN_COLUMNS: { role: UserRole; translationKey: string; icon: typeof UserIcon }[] = [
-  { role: 'funcionario-comum', translationKey: 'users.commonEmployee', icon: UserIcon },
-  { role: 'operador-maquinas', translationKey: 'users.machineOperator', icon: Wrench },
-  { role: 'controle-financeiro', translationKey: 'users.financialControl', icon: DollarSign },
-  { role: 'gerente', translationKey: 'users.manager', icon: Briefcase },
-  { role: 'administrador-local', translationKey: 'users.localAdmin', icon: Shield },
-  { role: 'desativado', translationKey: 'users.deactivated', icon: UserX },
-]
+import React, { useEffect, useState } from 'react'
+import { Table, Button, Card, Tag, Space, Modal, Form, Input, Select, message } from 'antd'
+import { Plus, Settings, User as UserIcon } from 'lucide-react'
+import { useAuth } from '../../../contexts/AuthContext'
+import { usersService, User, UserCreate } from '../../../services/users'
+import { groupsService, Farm } from '../../../services/groups'
+import UserPermissionModal from '../../../components/UserPermissionModal'
 
 export default function UsersControl() {
-  const t = useTranslation()
-  const [search, setSearch] = useState('')
-  const [fazendaFilter, setFazendaFilter] = useState<string>('Todas')
-  const [setorFilter, setSetorFilter] = useState<string>('Todos')
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'ativo' | 'inativo'>('Todos')
-  const [users, setUsers] = useState<UserType[]>(INITIAL_USERS)
-  const [selectedUser, setSelectedUser] = useState<UserType | null>(null)
-  const [addUserModalOpen, setAddUserModalOpen] = useState(false)
-  const [userEditando, setUserEditando] = useState<UserType | null>(null)
-  const [draggedUser, setDraggedUser] = useState<UserType | null>(null)
-  const [dragOverColumn, setDragOverColumn] = useState<UserRole | null>(null)
+  const { user: currentUser } = useAuth()
+  const [users, setUsers] = useState<User[]>([])
+  const [farms, setFarms] = useState<Farm[]>([])
+  const [loading, setLoading] = useState(false)
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
+  const [isPermModalVisible, setIsPermModalVisible] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [currentPermissions, setCurrentPermissions] = useState<Record<string, any>>({})
+  const [permLoading, setPermLoading] = useState(false)
+  const [form] = Form.useForm()
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const searchTerm = search.toLowerCase()
-      const matchesSearch =
-        !searchTerm ||
-        user.nome.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm) ||
-        user.setor?.toLowerCase().includes(searchTerm)
-
-      const matchesFazenda = fazendaFilter === 'Todas' || user.fazenda === fazendaFilter
-      const matchesSetor = setorFilter === 'Todos' || user.setor === setorFilter
-      const matchesStatus = statusFilter === 'Todos' || user.status === statusFilter
-
-      return matchesSearch && matchesFazenda && matchesSetor && matchesStatus
-    })
-  }, [users, search, fazendaFilter, setorFilter, statusFilter])
-
-  const usersByRole = useMemo(() => {
-    const grouped: Record<UserRole, UserType[]> = {
-      'funcionario-comum': [],
-      'operador-maquinas': [],
-      'controle-financeiro': [],
-      gerente: [],
-      'administrador-local': [],
-      desativado: [],
-    }
-
-    filteredUsers.forEach((user) => {
-      grouped[user.cargo].push(user)
-    })
-
-    return grouped
-  }, [filteredUsers])
-
-  const summary = useMemo(() => {
-    const totalUsuarios = users.length
-    const ativos = users.filter((user) => user.status === 'ativo').length
-    const inativos = users.filter((user) => user.status === 'inativo').length
-
-    return { totalUsuarios, ativos, inativos }
-  }, [users])
-
-  const handleSaveUser = (userData: Omit<UserType, 'id' | 'avatar' | 'dataCriacao' | 'ultimoAcesso'>) => {
-    if (userEditando) {
-      // Editar usuário existente
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userEditando.id
-            ? {
-                ...user,
-                ...userData,
-                avatar: user.avatar || '👤',
-              }
-            : user
-        )
-      )
-      setUserEditando(null)
-    } else {
-      // Criar novo usuário
-      const newUser: UserType = {
-        id: `user-${Date.now()}`,
-        ...userData,
-        avatar: '👤',
-        dataCriacao: new Date().toISOString().slice(0, 10),
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const [usersData, groupData] = await Promise.all([
+        usersService.getGroupUsers(),
+        currentUser?.group_id ? groupsService.getGroup(currentUser.group_id) : Promise.resolve(null)
+      ])
+      setUsers(usersData)
+      if (groupData) {
+        setFarms(groupData.farms)
       }
-      setUsers((prev) => [newUser, ...prev])
-    }
-    setAddUserModalOpen(false)
-  }
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers((prev) => prev.filter((user) => user.id !== userId))
-    setSelectedUser(null)
-  }
-
-  const handleMoveUser = (userId: string, newRole: UserRole) => {
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id === userId) {
-          return {
-            ...user,
-            cargo: newRole,
-            status: newRole === 'desativado' ? 'inativo' : user.status,
-          }
-        }
-        return user
-      })
-    )
-  }
-
-  const handleDragStart = (e: React.DragEvent, user: UserType) => {
-    setDraggedUser(user)
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.dropEffect = 'move'
-
-    const card = e.currentTarget as HTMLElement
-    card.classList.add('dragging')
-  }
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    const target = e.currentTarget as HTMLElement
-    target.classList.remove('dragging')
-    setDraggedUser(null)
-    setDragOverColumn(null)
-  }
-
-  const handleDragOver = (e: React.DragEvent, role: UserRole) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDragOverColumn(role)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement
-    const currentTarget = e.currentTarget as HTMLElement
-    if (!currentTarget.contains(relatedTarget)) {
-      setDragOverColumn(null)
+    } catch (error) {
+      message.error('Erro ao carregar dados')
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDrop = (e: React.DragEvent, newRole: UserRole) => {
-    e.preventDefault()
-    setDragOverColumn(null)
-    if (draggedUser) {
-      handleMoveUser(draggedUser.id, newRole)
-      setDraggedUser(null)
+  useEffect(() => {
+    if (currentUser) {
+      fetchData()
+    }
+  }, [currentUser])
+
+  const handleCreateUser = async (values: UserCreate) => {
+    try {
+      await usersService.createUser(values)
+      message.success('Usuário criado com sucesso')
+      setIsCreateModalVisible(false)
+      form.resetFields()
+      fetchData()
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Erro ao criar usuário'
+      message.error(msg)
     }
   }
 
-  const handleOpenAddModal = () => {
-    setUserEditando(null)
-    setAddUserModalOpen(true)
+  const openPermissions = async (user: User) => {
+    if (!farms.length) {
+      message.error('Nenhuma fazenda encontrada para configurar permissões.')
+      return
+    }
+
+    setSelectedUser(user)
+    setPermLoading(true)
+    try {
+      // Fetch existing permissions for the first farm
+      // In future: dropdown to select farm
+      const permData = await usersService.getUserFarmPermissions(user.id, farms[0].id)
+      setCurrentPermissions(permData.allowed_modules || {})
+      setIsPermModalVisible(true)
+    } catch (error) {
+      console.error(error)
+      message.warning('Não foi possível carregar as permissões existentes. Começando vazio.')
+      setCurrentPermissions({})
+      setIsPermModalVisible(true)
+    } finally {
+      setPermLoading(false)
+    }
   }
 
-  const handleOpenEditModal = (user: UserType) => {
-    setUserEditando(user)
-    setAddUserModalOpen(true)
-    setSelectedUser(null)
+  const handleSavePermissions = async (perms: any) => {
+    if (!selectedUser || !farms.length) return
+
+    try {
+      // Format payload if needed, ensuring boolean structure matches backend expectance
+      // Backend expects Record<string, ModulePermission>
+      await usersService.updateUserFarmPermissions(selectedUser.id, farms[0].id, perms)
+      message.success('Permissões salvas com sucesso!')
+      setIsPermModalVisible(false)
+    } catch (error) {
+      console.error(error)
+      message.error('Erro ao salvar permissões')
+    }
   }
+
+  const columns = [
+    {
+      title: 'Nome',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string) => <span style={{ fontWeight: 500 }}>{text}</span>
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Função',
+      dataIndex: 'base_role',
+      key: 'base_role',
+      render: (role: string) => (
+        <Tag color={role === 'owner' ? 'gold' : role === 'manager' ? 'blue' : 'green'}>
+          {role.toUpperCase()}
+        </Tag>
+      )
+    },
+    {
+      title: 'Status',
+      dataIndex: 'active',
+      key: 'active',
+      render: (active: boolean) => (
+        <Tag color={active ? 'success' : 'error'}>
+          {active ? 'ATIVO' : 'INATIVO'}
+        </Tag>
+      )
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      render: (_: any, record: User) => (
+        <Space>
+          <Button
+            icon={<Settings size={14} />}
+            onClick={() => openPermissions(record)}
+            loading={permLoading && selectedUser?.id === record.id}
+            disabled={record.base_role === 'owner'} // Don't edit owner permissions via this simple UI maybe?
+          >
+            Permissões
+          </Button>
+        </Space>
+      )
+    }
+  ]
 
   return (
-    <div className="feature-page">
-      <div className="feature-header">
-        <h1 className="feature-title">{t('users.title')}</h1>
-        <p className="feature-description">{t('users.description')}</p>
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 600, margin: 0 }}>Controle de Usuários</h1>
+          <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>Gerencie funcionários e suas permissões de acesso</p>
+        </div>
+        <Button
+          type="primary"
+          icon={<Plus size={16} />}
+          onClick={() => setIsCreateModalVisible(true)}
+          size="large"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          Novo Usuário
+        </Button>
       </div>
 
-      <div className="users-summary">
-        <div className="summary-card">
-          <span className="summary-label">{t('users.totalUsers')}</span>
-          <span className="summary-value">{summary.totalUsuarios}</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-label">{t('users.activeUsers')}</span>
-          <span className="summary-value active">{summary.ativos}</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-label">{t('users.inactiveUsers')}</span>
-          <span className="summary-value inactive">{summary.inativos}</span>
-        </div>
-      </div>
-
-      <div className="users-controls">
-        <div className="search-container">
-          <Search size={20} className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder={t('users.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <div className="filters-group">
-          <div className="select-group">
-            <Filter size={16} />
-            <select
-              className="filter-select"
-              value={fazendaFilter}
-              onChange={(e) => setFazendaFilter(e.target.value)}
-            >
-              <option value="Todas">{t('users.allFarms')}</option>
-              {FAZENDAS.map((fazenda) => (
-                <option key={fazenda} value={fazenda}>
-                  {fazenda}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="select-group">
-            <select
-              className="filter-select"
-              value={setorFilter}
-              onChange={(e) => setSetorFilter(e.target.value)}
-            >
-              <option value="Todos">{t('users.allSectors')}</option>
-              {SETORES.map((setor) => (
-                <option key={setor} value={setor}>
-                  {setor}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="select-group">
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'Todos' | 'ativo' | 'inativo')}
-            >
-              <option value="Todos">{t('users.allStatus')}</option>
-              <option value="ativo">{t('common.active')}</option>
-              <option value="inativo">{t('common.inactive')}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="users-actions">
-        <button type="button" className="primary-button create-user-button" onClick={handleOpenAddModal}>
-          <Plus size={20} />
-          {t('users.createUser')}
-        </button>
-      </div>
-
-      <div className="kanban-board">
-        {KANBAN_COLUMNS.map((column) => {
-          const columnUsers = usersByRole[column.role]
-          const Icon = column.icon
-
-          return (
-            <div
-              key={column.role}
-              className={`kanban-column ${dragOverColumn === column.role ? 'drag-over' : ''}`}
-              onDragOver={(e) => handleDragOver(e, column.role)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, column.role)}
-            >
-              <div className="kanban-column-header">
-                <div className="kanban-column-title">
-                  <Icon size={20} />
-                  <h3>{t(column.translationKey)}</h3>
-                  <span className="kanban-count">{columnUsers.length}</span>
-                </div>
-              </div>
-
-              <div className="kanban-column-content">
-                {columnUsers.length === 0 ? (
-                  <div className="kanban-empty">{t('users.noUsersInCategory')}</div>
-                ) : (
-                  columnUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="kanban-card user-card"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, user)}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <div className="user-card-header">
-                        <div className="user-avatar">{user.avatar || '👤'}</div>
-                        <button
-                          className="user-view-button"
-                          onClick={() => setSelectedUser(user)}
-                          aria-label={t('users.viewDetails')}
-                        >
-                          <Eye size={16} />
-                        </button>
-                      </div>
-                      <div className="user-card-body">
-                        <h4 className="user-card-name">{user.nome}</h4>
-                        <p className="user-card-email">{user.email}</p>
-                        {user.setor && <p className="user-card-setor">{user.setor}</p>}
-                        {user.fazenda && <p className="user-card-fazenda">{user.fazenda}</p>}
-                      </div>
-                      <div className="user-card-footer">
-                        <span className={`user-status-badge ${user.status}`}>
-                          {user.status === 'ativo' ? t('common.active') : t('common.inactive')}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {addUserModalOpen && (
-        <AddUserModal
-          onClose={() => {
-            setAddUserModalOpen(false)
-            setUserEditando(null)
-          }}
-          onSave={handleSaveUser}
-          userEditando={userEditando}
+      <Card variant="borderless" style={{ borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Table
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
+          loading={loading}
         />
-      )}
+      </Card>
 
-      {selectedUser && (
-        <UserDetailsModal
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onEdit={handleOpenEditModal}
-          onDelete={handleDeleteUser}
+      {/* Modal Create User */}
+      <Modal
+        title="Novo Usuário"
+        open={isCreateModalVisible}
+        onCancel={() => setIsCreateModalVisible(false)}
+        onOk={() => form.submit()}
+        destroyOnClose={true}
+      >
+        <Form layout="vertical" form={form} onFinish={handleCreateUser}>
+          <Form.Item name="name" label="Nome Completo" rules={[{ required: true, message: 'Obrigatório' }]}>
+            <Input prefix={<UserIcon size={14} />} placeholder="Nome do funcionário" />
+          </Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Obrigatório', type: 'email' }]}>
+            <Input placeholder="email@exemplo.com" />
+          </Form.Item>
+          <Form.Item name="cpf" label="CPF" rules={[{ required: true, message: 'Obrigatório' }]}>
+            <Input placeholder="000.000.000-00" />
+          </Form.Item>
+          <Form.Item name="password" label="Senha Inicial" rules={[{ required: true, message: 'Obrigatório' }]}>
+            <Input.Password placeholder="******" />
+          </Form.Item>
+          <Form.Item name="base_role" label="Função" initialValue="operational">
+            <Select options={[
+              { label: 'Operacional', value: 'operational' },
+              { label: 'Gerente (Manager)', value: 'manager' },
+              { label: 'Financeiro', value: 'financial' }
+            ]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Permissions */}
+      {selectedUser && isPermModalVisible && (
+        <UserPermissionModal
+          user={selectedUser as any}
+          onClose={() => setIsPermModalVisible(false)}
+          onSave={handleSavePermissions}
+          initialPermissions={currentPermissions}
+          availableModules={(() => {
+            if (!farms.length || !farms[0].modules) return undefined
+
+            // Handle structure {"enabled": ["truck-loading", ...]}
+            if (Array.isArray((farms[0].modules as any).enabled)) {
+              return (farms[0].modules as any).enabled
+            }
+
+            // Handle flat structure {"truck-loading": true, ...}
+            if (Object.keys(farms[0].modules).length > 0) {
+              return Object.keys(farms[0].modules)
+            }
+
+            return undefined
+          })()}
         />
       )}
     </div>
   )
 }
-

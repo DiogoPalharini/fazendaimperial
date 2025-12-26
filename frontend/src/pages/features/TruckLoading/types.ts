@@ -4,6 +4,7 @@ export type Carregamento = {
   type: 'interno' | 'remessa' | 'venda'
   truck: string
   driver: string
+  driver_document?: string | null
   farm: string
   field: string
   product: string
@@ -32,6 +33,48 @@ export type Carregamento = {
   nfe_status?: string | null
   nfe_xml_url?: string | null
   nfe_danfe_url?: string | null
+  nfe_chave?: string | null
+  nfe_protocolo?: string | null
+
+  // Configs
+  umidade_padrao?: number
+  fator_umidade?: number
+  impurezas_padrao?: number
+
+  // Campos NFe Opcionais
+  natureza_operacao?: string
+  cfop?: string
+  ncm?: string
+  valor_unitario?: string
+
+  // Emitente
+  cnpj_emitente?: string
+  nome_emitente?: string
+  logradouro_emitente?: string
+  numero_emitente?: string
+  bairro_emitente?: string
+  municipio_emitente?: string
+  uf_emitente?: string
+  cep_emitente?: string
+  inscricao_estadual_emitente?: string
+
+  // Destinatário
+  cnpj_destinatario?: string
+  nome_destinatario?: string
+  logradouro_destinatario?: string
+  numero_destinatario?: string
+  bairro_destinatario?: string
+  municipio_destinatario?: string
+  uf_destinatario?: string
+  cep_destinatario?: string
+  indicador_inscricao_estadual_destinatario?: string
+  inscricao_estadual_destinatario?: string
+
+  // Transportador
+  nome_transportador?: string
+  cnpj_transportador?: string
+  placa_veiculo?: string
+  uf_veiculo?: string
 }
 
 export type CarregamentoForm = {
@@ -39,6 +82,7 @@ export type CarregamentoForm = {
   type: 'interno' | 'remessa' | 'venda'
   truck: string
   driver: string
+  driver_document?: string | null
   farm: string
   field: string
   product: string
@@ -62,6 +106,11 @@ export type CarregamentoForm = {
   umidade_empresa_percent?: number | null
   impurezas_empresa_percent?: number | null
   peso_com_desconto_empresa?: number | null
+
+  // Configs
+  umidade_padrao?: number
+  fator_umidade?: number
+  impurezas_padrao?: number
 
   // Campos NFe Opcionais
   natureza_operacao?: string

@@ -24,7 +24,16 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     tags: ['monitoramento', 'kpi'],
   },
   {
-    key: 'carregamento',
+    key: 'logistics',
+    path: '/logistica',
+    name: 'Logística (Externo)',
+    description: 'Rastreio de expedições, rotas e motoristas externos.',
+    category: 'operacional',
+    icon: Truck,
+    tags: ['logística'],
+  },
+  {
+    key: 'truck-loading',
     path: '/carregamento',
     name: 'Carregamento de Caminhão',
     description: 'Controle de filas, pesagem e rastreio das expedições.',
@@ -33,7 +42,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     tags: ['logística'],
   },
   {
-    key: 'nota-fiscal',
+    key: 'invoice',
     path: '/nota-fiscal',
     name: 'Notas Fiscais',
     description: 'Gestão de NF-e emitidas e recebidas com validação automática.',
@@ -41,7 +50,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: FileText,
   },
   {
-    key: 'maquinas',
+    key: 'machines',
     path: '/maquinas',
     name: 'Máquinas e Equipamentos',
     description: 'Telemetria, manutenção e disponibilidade dos equipamentos.',
@@ -50,7 +59,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     tags: ['telemetria'],
   },
   {
-    key: 'insumos',
+    key: 'inputs',
     path: '/insumos',
     name: 'Controle de Insumos',
     description: 'Entrada, saída e rastreabilidade do estoque de insumos.',
@@ -58,7 +67,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: Package,
   },
   {
-    key: 'financeiro',
+    key: 'finance',
     path: '/financeiro',
     name: 'Financeiro',
     description: 'Fluxo de caixa, contas a pagar e receitas por cultura.',
@@ -66,7 +75,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: Wallet,
   },
   {
-    key: 'atividades',
+    key: 'activities',
     path: '/atividades',
     name: 'Atividades',
     description: 'Planejamento diário, controle de talhões e checklist de execução.',
@@ -74,15 +83,16 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: ClipboardList,
   },
   {
-    key: 'meteorologia',
+    key: 'weather',
     path: '/meteorologia',
     name: 'Meteorologia',
     description: 'Monitoramento climático hiperlocal com alertas proativos.',
     category: 'estrategico',
     icon: CloudSun,
+    tags: ['clima'],
   },
   {
-    key: 'solo',
+    key: 'soil',
     path: '/solo',
     name: 'Análise de Solo',
     description: 'Mapa de fertilidade, condutividade e recomendações por talhão.',
@@ -90,7 +100,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: FlaskConical,
   },
   {
-    key: 'safra',
+    key: 'harvest',
     path: '/safra',
     name: 'Gestão de Safras',
     description: 'Planejamento das safras, custos e produtividade comparada.',
@@ -98,7 +108,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: Sprout,
   },
   {
-    key: 'usuarios',
+    key: 'users',
     path: '/usuarios',
     name: 'Usuários',
     description: 'Administração dos usuários internos e seus perfis de acesso.',

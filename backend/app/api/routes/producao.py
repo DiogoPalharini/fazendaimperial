@@ -31,11 +31,13 @@ def get_producao_resumo(
     # Soma do peso considerado pela fazenda (peso_com_desconto_fazenda)
     # Se for nulo, usa quantity (legado) ou 0
     
-    total_carregado = db.query(func.sum(Carregamento.peso_com_desconto_fazenda)).scalar() or 0.0
+    val_desconto = db.query(func.sum(Carregamento.peso_com_desconto_fazenda)).scalar()
+    total_carregado = float(val_desconto) if val_desconto is not None else 0.0
     
     # Se o peso com desconto for 0 (dados antigos), tentar somar quantity
     if total_carregado == 0:
-         total_carregado = db.query(func.sum(Carregamento.quantity)).scalar() or 0.0
+         val_mtd = db.query(func.sum(Carregamento.quantity)).scalar()
+         total_carregado = float(val_mtd) if val_mtd is not None else 0.0
 
     # 3. Saldo
     saldo = total_colhido - total_carregado

@@ -36,3 +36,43 @@ def create_armazem(
     db.commit()
     db.refresh(armazem)
     return armazem
+
+@router.put("/{armazem_id}", response_model=ArmazemSchema)
+def update_armazem(
+    *,
+    db: Session = Depends(deps.get_db),
+    armazem_id: UUID,
+    armazem_in: ArmazemUpdate,
+) -> Any:
+    """
+    Update an armazem.
+    """
+    armazem = db.query(Armazem).filter(Armazem.id == armazem_id).first()
+    if not armazem:
+        raise HTTPException(status_code=404, detail="Armazem not found")
+    
+    update_data = armazem_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(armazem, field, value)
+        
+    db.add(armazem)
+    db.commit()
+    db.refresh(armazem)
+    return armazem
+
+@router.delete("/{armazem_id}", response_model=ArmazemSchema)
+def delete_armazem(
+    *,
+    db: Session = Depends(deps.get_db),
+    armazem_id: UUID,
+) -> Any:
+    """
+    Delete an armazem.
+    """
+    armazem = db.query(Armazem).filter(Armazem.id == armazem_id).first()
+    if not armazem:
+        raise HTTPException(status_code=404, detail="Armazem not found")
+        
+    db.delete(armazem)
+    db.commit()
+    return armazem

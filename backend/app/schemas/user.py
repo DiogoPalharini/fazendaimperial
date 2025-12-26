@@ -18,7 +18,7 @@ class UserBase(ORMModel):
 
 
 class UserCreate(BaseModel):
-    group_id: int
+    group_id: int | None = None
     name: str = Field(min_length=3, max_length=120)
     cpf: str = Field(min_length=11, max_length=14)
     email: EmailStr

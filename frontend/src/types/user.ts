@@ -1,4 +1,4 @@
-export type BaseRole = 
+export type BaseRole =
   | 'owner'
   | 'manager'
   | 'financial'
@@ -6,7 +6,7 @@ export type BaseRole =
   | 'system_admin'
 
 // Tipo antigo mantido para compatibilidade (será removido gradualmente)
-export type UserRole = 
+export type UserRole =
   | 'gestor-geral'
   | 'gerente-producao'
   | 'gestor-estoque'
@@ -38,6 +38,15 @@ export type MenuItem = {
   icon: string
   roles: UserRole[]
 }
+
+export type ModulePermission = {
+  read: boolean
+  create: boolean
+  update: boolean
+  delete: boolean
+}
+
+export type GranularPermissions = Record<string, ModulePermission>
 
 export type UserPermissions = {
   canViewDashboard: boolean

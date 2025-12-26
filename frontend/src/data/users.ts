@@ -141,6 +141,13 @@ export const MENU_ITEMS: MenuItem[] = [
     roles: ['gestor-geral', 'motorista-logistica', 'system_admin']
   },
   {
+    id: 'carregamento',
+    label: 'Carregamento (Interno)',
+    path: '/carregamento',
+    icon: 'Package',
+    roles: ['gestor-geral', 'operador-maquina', 'system_admin']
+  },
+  {
     id: 'relatorios',
     label: 'Relatórios',
     path: '/relatorios',
@@ -291,4 +298,3 @@ export function getUserByEmail(email: string): User | null {
 export function getUserById(id: string): User | null {
   return TEST_USERS.find(user => user.id === id) || null
 }
-

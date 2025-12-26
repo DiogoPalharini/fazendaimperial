@@ -17,7 +17,6 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [selectedModules, setSelectedModules] = useState<string[]>([])
-  const [groupData, setGroupData] = useState<Group | null>(null)
 
   const [form, setForm] = useState({
     groupName: group.name,
@@ -49,7 +48,7 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
       try {
         setIsLoading(true)
         const data = await groupsService.getGroup(group.id)
-        setGroupData(data)
+
 
         // Preencher formulário com dados existentes
         setForm({
@@ -370,7 +369,10 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
               <>
                 {form.farms.map((farm, index) => (
                   <div key={farm.id || index} style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '12px' }}>
-                    <h5 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600 }}>Fazenda {index + 1}</h5>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Fazenda {index + 1}</h5>
+                    </div>
+
                     <div className="form-grid">
                       <label>
                         Nome da Fazenda
@@ -450,19 +452,7 @@ export default function EditGroupModal({ group, availableModules, onClose, onSuc
                         </h5>
 
                         <div className="form-grid">
-                          {/* Token is Group Level, show here for context? Or separate? 
-                              Actually form.focusNfeToken is global. Show it in the first farm or separate group block?
-                              The user logic put it in Fiscal Block.
-                              Since EditGroup has multiple farms, showing Token here (global) might be confusing if duplicated.
-                              But strictly following CreateGroup logic: Token is in this block.
-                              If I have 2 farms, should I show Token 2 times? No.
-                              I will show Token ONLY for the first farm (index 0) or move it to Group Section.
-                              The user request was to group them.
-                              I'll put Token in the first farm's block OR handle it properly.
-                              Given `focusNfeToken` is on `form.` (root), not `farm.`, I should display it ONCE.
-                              I will add a specific block for Group Fiscal Config if modules enabled, OUTSIDE the farm loop?
-                              Or just display it in the first farm block.
-                          */}
+                          {/* Token is Group Level, default to first farm block logic */}
                           {index === 0 && (
                             <label>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

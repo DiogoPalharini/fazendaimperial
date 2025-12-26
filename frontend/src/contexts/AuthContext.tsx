@@ -9,8 +9,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User | null>
   logout: () => void
   hasPermission: (permission: keyof ReturnType<typeof getUserPermissions>) => boolean
+  hasModulePermission: (module: string, action?: 'read' | 'create' | 'update' | 'delete' | 'dashboard' | 'manage_weight' | 'manage_quality' | string) => boolean
   isLoading: boolean
-  allowedModules: string[]
+  allowedModules: string[] // Deprecated: use granularPermissions keys
+  granularPermissions: Record<string, any>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -52,15 +54,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [allowedModules, setAllowedModules] = useState<string[]>([])
+  const [granularPermissions, setGranularPermissions] = useState<Record<string, any>>({})
 
   // Buscar módulos permitidos quando o usuário mudar
   useEffect(() => {
     if (user && user.base_role !== 'system_admin') {
       authService.getAllowedModules()
-        .then(setAllowedModules)
-        .catch(() => setAllowedModules([]))
+        .then(data => {
+          // Se o backend retornar lista de strings (velho) ou objeto (novo), lidar com ambos
+          if (Array.isArray(data)) {
+            setAllowedModules(data)
+            // Converter array antigo para granular (assumir read=true para todos)
+            const granular: Record<string, any> = {}
+            data.forEach(m => granular[m] = { read: true, dashboard: true, create: true, update: true, delete: true })
+            setGranularPermissions(granular)
+          } else {
+            setGranularPermissions(data)
+            setAllowedModules(Object.keys(data))
+          }
+        })
+        .catch(() => {
+          setAllowedModules([])
+          setGranularPermissions({})
+        })
     } else {
       setAllowedModules([])
+      setGranularPermissions({})
     }
   }, [user])
 
@@ -68,7 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const token = localStorage.getItem('integrarural-token')
     const savedUser = localStorage.getItem('integrarural-user')
-    
+
     if (token && savedUser) {
       try {
         const userData = JSON.parse(savedUser)
@@ -99,17 +118,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string): Promise<User | null> => {
     setIsLoading(true)
-    
+
     try {
       const response = await authService.login({ username: email, password })
-      
+
       // Salvar token
       localStorage.setItem('integrarural-token', response.access_token)
-      
+
       // Buscar dados do usuário
       const userResponse = await authService.getCurrentUser()
       const mappedUser = mapUserResponseToUser(userResponse)
-      
+
       setUser(mappedUser)
       localStorage.setItem('integrarural-user', JSON.stringify(mappedUser))
       setIsLoading(false)
@@ -135,14 +154,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return permissions[permission]
   }
 
+  const hasModulePermission = (module: string, action: string = 'read'): boolean => {
+    // System admin tem acesso total
+    if (user?.base_role === 'system_admin') return true
+
+    // Se não tiver granular permissions carregado ainda (ou for usuario antigo), usar allowedModules
+    const modulePerms = granularPermissions[module]
+    if (!modulePerms) {
+      // Fallback: se está na lista de allowedModules, assume true?
+      // Não, se não tem granular, e está na lista, assume FULL access (comportamento antigo)
+      return allowedModules.includes(module)
+    }
+
+    // Se tiver granular, checar flag específica
+    return !!modulePerms[action]
+  }
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     login,
     logout,
     hasPermission,
+    hasModulePermission,
     isLoading,
-    allowedModules
+    allowedModules, // Manter por compatibilidade
+    granularPermissions
   }
 
   return (
